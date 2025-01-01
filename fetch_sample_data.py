@@ -1,7 +1,6 @@
 import instaloader
 import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
-
 import os
 
 # Ensure the directory exists
@@ -18,7 +17,7 @@ top_influencers = [
 def fetch_posts_for_profile(profile_name, max_posts=20):
     """
     Fetches the first 'max_posts' posts of the specified Instagram profile.
-    Saves the data in a JSON file named '<profile_name>_posts.json'.
+    Returns the data as a list of dictionaries.
     """
     loader = instaloader.Instaloader()
 
@@ -35,6 +34,7 @@ def fetch_posts_for_profile(profile_name, max_posts=20):
             post_type = "Carousel" if post.typename == "GraphSidecar" else "Reel" if post.is_video else "Image"
 
             post_info = {
+                "user": profile_name,
                 "id": post.shortcode,
                 "caption": post.caption if post.caption else "",
                 "type": post_type,
@@ -44,50 +44,48 @@ def fetch_posts_for_profile(profile_name, max_posts=20):
 
             posts_data.append(post_info)
 
-        # Save to a JSON file
-        with open(f"./sample_data/{profile_name}_posts.json", "w") as f:
-            json.dump(posts_data, f, indent=4)
-
-        print(f"Data for {profile_name} saved successfully.")
-        return profile_name, "Success"
+        print(f"Data for {profile_name} fetched successfully.")
+        return posts_data
     
     except instaloader.exceptions.ProfileNotExistsException:
         print(f"The profile '{profile_name}' does not exist.")
-        return profile_name, "Profile Not Found"
+        return []
     
     except instaloader.exceptions.QueryReturnedNotFoundException:
         print(f"Failed to fetch data for profile '{profile_name}'.")
-        return profile_name, "Query Error"
+        return []
     
     except Exception as e:
         print(f"An error occurred for profile '{profile_name}': {e}")
-        return profile_name, f"Error: {str(e)}"
+        return []
 
 def fetch_posts_parallel(profiles, max_posts=20):
     """
-    Fetches posts for a list of profiles in parallel.
+    Fetches posts for a list of profiles in parallel and aggregates the results.
+    Returns a list of all posts.
     """
-    results = []
+    all_posts = []
     with ThreadPoolExecutor(max_workers=5) as executor:  # Limit workers to avoid rate limiting
         futures = {executor.submit(fetch_posts_for_profile, profile, max_posts): profile for profile in profiles}
         
         for future in as_completed(futures):
             profile_name = futures[future]
             try:
-                result = future.result()
-                results.append(result)
+                posts = future.result()
+                all_posts.extend(posts)  # Add posts to the cumulative list
             except Exception as exc:
                 print(f"An error occurred for {profile_name}: {exc}")
-                results.append((profile_name, "Error"))
 
-    return results
+    return all_posts
 
 # Run the script
 if __name__ == "__main__":
     print("Starting data fetch for top influencers...")
-    results = fetch_posts_parallel(top_influencers, max_posts=20)
+    cumulative_posts = fetch_posts_parallel(top_influencers, max_posts=20)
     
-    # Print summary
-    print("\nSummary:")
-    for profile_name, status in results:
-        print(f"Profile: {profile_name}, Status: {status}")
+    # Save the cumulative data to a single JSON file
+    output_file = "./sample_data/influencers_posts.json"
+    with open(output_file, "w") as f:
+        json.dump(cumulative_posts, f, indent=4)
+
+    print(f"\nAll data saved to '{output_file}'. Total posts: {len(cumulative_posts)}")
