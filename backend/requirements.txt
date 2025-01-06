@@ -1,0 +1,4 @@
+langflow
+langchain
+instaloader
+fastapi
