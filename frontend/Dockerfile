@@ -1,4 +1,4 @@
-FROM node:18-alpine
+FROM node:latest
 
 WORKDIR /app
 
@@ -7,8 +7,6 @@ RUN npm install
 
 COPY . .
 
-RUN mv .env ..
-
 EXPOSE 3000
 
-CMD ["npm", "run", "dev"]
+CMD ["npm", "run", "start"]

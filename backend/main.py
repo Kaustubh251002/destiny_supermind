@@ -9,8 +9,10 @@ import uuid
 import json
 import logging
 
-# Load environment variables
-load_dotenv('../.env')
+if os.path.exists('../.env'):
+    load_dotenv('../.env')
+else:
+    load_dotenv()
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -21,7 +23,7 @@ app = FastAPI(title="Instagram Data Insights API", description="API for fetching
 #Allow access from local frontend server
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["http://localhost:3000", "https://destiny-supermind-frontend.onrender.com"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -122,6 +124,8 @@ async def get_data(
                 with open("./live_data/data.json", "r") as file:
                     json_data = json.load(file)
 
+                # delete the file after loading
+                os.remove("./live_data/data.json")
                 if not json_data:
                     logging.error("No data fetched from Instagram.")
                     raise HTTPException(status_code=500, detail="No data fetched from Instagram.")
