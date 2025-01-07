@@ -8,10 +8,6 @@ services:
     runtime: docker
     dockerContext: ./backend
     dockerfilePath: Dockerfile
-    envVars:
-      - key: PORT
-        value: 8000
-    startCommand: uvicorn main:app --host 0.0.0.0 --port 8000
     autoDeploy: true # Optional: Automatically deploy on new commits
 
   # Frontend service
@@ -20,8 +16,4 @@ services:
     runtime: docker
     dockerContext: ./frontend
     dockerfilePath: Dockerfile
-    envVars:
-      - key: PORT
-        value: 3000
-    startCommand: npm run dev
     autoDeploy: true # Optional: Automatically deploy on new commits
