@@ -22,11 +22,12 @@ const nextConfig = {
     PUBLIC_BACKEND_URL_DEV: process.env.PUBLIC_BACKEND_URL_DEV,
     PORT: process.env.PORT || 3000 // Use the PORT environment variable if set, otherwise default to 3000
   },
+  crossOrigin: 'anonymous',
   images: {
     remotePatterns: [
       {
         protocol: 'https', // Or 'http' if needed
-        hostname: '*.fna.fbcdn.net', // The domain of your image
+        hostname: 'instagram.f*.fna.fbcdn.net', // The domain of your image
       },
       // {
       //   protocol: 'https',

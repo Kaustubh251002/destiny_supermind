@@ -1,8 +1,6 @@
-
 import React, { useState, useEffect } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { Calendar, Clock, Hash, Video, Image as ImageIcon, TrendingUp, ArrowUp, ArrowDown } from 'lucide-react';
-
 
 const TopPostAndEngagement = ({ posts }) => {
   if (!posts || posts.length === 0) return <div>No data available</div>;
@@ -16,16 +14,14 @@ const TopPostAndEngagement = ({ posts }) => {
 
   const currentWeek = getWeekNumber(new Date());
   
-  // Calculate the average views from valid data
   const validViews = posts.filter(post => post.metadata.views > 0 && post.metadata.views !== null).map(post => post.metadata.views);
   const averageViews = validViews.length > 0 ? validViews.reduce((acc, view) => acc + view, 0) / validViews.length : 0;
 
-  // Assume a fallback view-to-like ratio if no valid views data
-  const fallbackViewToLikeRatio = 20;  // Or use 10:1 ratio here
+  const fallbackViewToLikeRatio = 20;
   const safeViewsForPost = (views) => {
     if (views && views > 0) return views;
     if (averageViews > 0) return averageViews;
-    return fallbackViewToLikeRatio;  // Fallback if no valid views
+    return fallbackViewToLikeRatio;
   };
 
   const weeklyEngagement = posts.reduce((acc, post) => {
@@ -50,26 +46,18 @@ const TopPostAndEngagement = ({ posts }) => {
 
   const topPost = posts.reduce((max, curr) => 
     curr.metadata.likes > max.metadata.likes ? curr : max, posts[0]);
+  const [imageError, setImageError] = useState(false);
+  const proxiedImageUrl = `/api/image-proxy?imageUrl=${encodeURIComponent(topPost.metadata.urls[0] || "")}`;
+
+  useEffect(() => {
+    const img = new Image();
+    img.onload = () => setImageError(false);
+    img.onerror = () => setImageError(true);
+    img.src = proxiedImageUrl;
+  }, [proxiedImageUrl]);
 
   const postsByHour = Array(24).fill(0);
   const engagementByHour = Array(24).fill(0);
-  const [imageError, setImageError] = useState(false);
-
-  useEffect(() => {
-    // Check if the image URL exists and is valid (basic validation)
-    const img = new Image();
-    img.onload = () => setImageError(false); // If the image loads successfully
-    img.onerror = () => setImageError(true); // If there's an error loading the image
-
-    img.src = topPost.metadata.urls[0] || "";
-    console.log("src=",img.src);
-
-    return () => {
-      setImageError(false); // Reset state on component unmount
-    };
-  }, [topPost.metadata.urls]);
-
-  
 
   posts.forEach(post => {
     const hour = new Date(post.metadata.timestamp).getHours();
@@ -85,16 +73,6 @@ const TopPostAndEngagement = ({ posts }) => {
 
   const bestHour = engagementByHour.indexOf(Math.max(...engagementByHour));
 
-  // Check if the image URL is valid
-  const isValidImageUrl = (url) => {
-    const img = new Image();
-    img.src = url;
-    return new Promise((resolve, reject) => {
-      img.onload = () => resolve(true);
-      img.onerror = () => reject(false);
-    });
-  };
-
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-3">
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
@@ -109,10 +87,10 @@ const TopPostAndEngagement = ({ posts }) => {
             </div>
           ) : (
             <img
-              src={topPost.metadata.urls[0] || "/api/placeholder/400/400"} // fallback image if URL is empty or broken
+              src={proxiedImageUrl || "/api/placeholder/400/400"}
               alt="Top Post"
               className="object-cover w-full h-full"
-              style={{ objectFit: 'cover', objectPosition: 'center' }} // Ensures correct aspect ratio and image positioning
+              style={{ objectFit: 'cover', objectPosition: 'center' }}
             />
           )}
         </div>
@@ -189,4 +167,3 @@ const TopPostAndEngagement = ({ posts }) => {
 };
 
 export default TopPostAndEngagement;
-
