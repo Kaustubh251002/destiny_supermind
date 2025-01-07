@@ -26,7 +26,7 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: 'https', // Or 'http' if needed
-        hostname: '*.fna.fbcdn.net', // The domain of your image
+        hostname: 'instagram.f*.fna.fbcdn.net', // The domain of your image
       },
       // {
       //   protocol: 'https',
