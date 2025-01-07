@@ -9,43 +9,34 @@ from tqdm import tqdm
 import re
 import threading
 import queue
+from dataclasses import dataclass
+from typing import Set, List, Dict
+from math import ceil
 
-# Ensure the directory exists
+# Configure logging and directories
 os.makedirs("./sample_data", exist_ok=True)
-
-# Configure logging to print to the terminal
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
-    handlers=[logging.StreamHandler()]  # Prints logs to the terminal
+    handlers=[logging.StreamHandler()]
 )
 logger = logging.getLogger()
 
-# Lock for thread-safe file writing
-file_lock = threading.Lock()
-
-# Buffer size for batch updates
 BATCH_SIZE = 100
 
-# Thread-safe queue for storing posts to be written
-write_queue = queue.Queue()
+@dataclass
+class LoaderPair:
+    primary: instaloader.Instaloader
+    secondary: instaloader.Instaloader
+    current_index: int = 0
 
-# List of top Instagram influencers
-top_influencers = [
-    "instagram", "cristiano", "leomessi", "selenagomez", "kyliejenner",
-    "therock", "arianagrande", "kimkardashian", "beyonce", "khloekardashian",
-    "nike", "justinbieber", "kendalljenner", "taylorswift", "natgeo",
-    "virat.kohli", 
-    "jlo", "nickiminaj", "neymarjr", "kourtneykardash",
-    "mileycyrus", "katyperry", "zendaya", "kevinhart4real", "realmadrid",
-    "iamcardib", "kingjames", "ddlovato", "badgalriri", "chrisbrownofficial",
-    "champagnepapi", "theellenshow", "fcbarcelona", "k.mbappe", "billieeilish",
-    "championsleague", "gal_gadot", "lalalalisa_m", "vindiesel", "nasa",
-    "shraddhakapoor", "priyankachopra", "narendramodi", "iamzlatanibrahimovic", "dualipa",
-    "nba", "emmawatson", "gal_gadot", "shawnmendes", "harrystyles"
-]
+    def get_current_loader(self):
+        return self.primary if self.current_index == 0 else self.secondary
 
+    def switch_loader(self):
+        self.current_index = (self.current_index + 1) % 2
+        return self.get_current_loader()
 
 class CustomRateController(instaloader.RateController):
     def __init__(self, context):
@@ -57,7 +48,7 @@ class CustomRateController(instaloader.RateController):
         self.sleep(wait_time)
 
     def sleep(self, secs: float):
-        randomized_secs = secs + random.uniform(1, 3)  # Add random jitter
+        randomized_secs = secs + random.uniform(1, 3)
         logger.info(f"Sleeping for {randomized_secs:.2f} seconds...")
         time.sleep(randomized_secs)
 
@@ -72,153 +63,221 @@ def extract_hashtags(caption):
 def clean_caption(caption):
     return re.sub(r'[^a-zA-Z0-9\s]', '', caption) if caption else ""
 
-# Writing thread function
-def writer_thread(output_file):
-    batch = []
+def writer_thread(output_file: str):
+    """Thread for batch writing posts to JSON file"""
+    posts_buffer = []
+    
     while True:
         try:
             post = write_queue.get()
-            if post is None:  # Termination signal
+            if post is None:  # Exit signal
                 break
-            batch.append(post)
-            if len(batch) >= BATCH_SIZE:
-                write_batch_to_json(batch, output_file)
-                batch.clear()
+                
+            posts_buffer.append(post)
+            
+            if len(posts_buffer) >= BATCH_SIZE:
+                write_batch_to_json(posts_buffer, output_file)
+                posts_buffer.clear()
+                
         except Exception as e:
             logger.error(f"Error in writer thread: {e}")
+    
     # Write remaining posts
-    if batch:
-        write_batch_to_json(batch, output_file)
+    if posts_buffer:
+        write_batch_to_json(posts_buffer, output_file)
 
-def write_batch_to_json(batch, output_file):
-    with file_lock:
+def write_batch_to_json(batch: List[Dict], output_file: str):
+    """Write a batch of posts to JSON file"""
+    with threading.Lock():
         try:
+            existing_data = []
             if os.path.isfile(output_file):
                 with open(output_file, "r", encoding="utf-8") as f:
                     try:
                         existing_data = json.load(f)
                     except json.JSONDecodeError:
                         logger.error(f"JSON decode error in {output_file}. Resetting file.")
-                        existing_data = []
-            else:
-                existing_data = []
 
-            # Append the batch of posts
             existing_data.extend(batch)
-
+            
             with open(output_file, "w", encoding="utf-8") as f:
-                json.dump(existing_data, f, indent=4)
+                json.dump(existing_data, f, indent=2, ensure_ascii=False)
+                
         except Exception as e:
             logger.error(f"Error writing batch to JSON file: {e}")
 
-def fetch_posts_for_profile(loaders, profile_name, max_posts=1000, processed_ids=None):
-    processed_ids = processed_ids or set()
-    loader_indices = [0] * len(loaders)
-    current_loader = 0
+def fetch_profile_chunk(loader_pair: LoaderPair, profile_name: str, start_idx: int, end_idx: int, 
+                       write_queue: queue.Queue, shared_processed_ids: Set[str]) -> int:
+    """Fetch a chunk of posts from a profile using a loader pair"""
+    posts_fetched = 0
+    current_post_index = start_idx
+    retries = 0
+    max_retries = 4
+    
+    while current_post_index < end_idx and retries < max_retries:
+        try:
+            current_loader = loader_pair.get_current_loader()
+            profile = instaloader.Profile.from_username(current_loader.context, profile_name)
+            
+            for post in profile.get_posts():
+                if posts_fetched < (current_post_index - start_idx):
+                    posts_fetched += 1
+                    continue
+                    
+                if current_post_index >= end_idx:
+                    break
+                    
+                if post.shortcode in shared_processed_ids:
+                    continue
 
-    try:
-        profile = instaloader.Profile.from_username(loaders[current_loader].context, profile_name)
+                post_type = "Carousel" if post.typename == "GraphSidecar" else "Reel" if post.is_video else "Image"
+                post_urls = [node.display_url for node in post.get_sidecar_nodes()] if post_type == "Carousel" else [post.url]
 
-        with tqdm(total=max_posts, desc=f"Fetching posts for {profile_name}") as progress_bar:
-            while loader_indices[current_loader] < max_posts:
-                try:
-                    for post in profile.get_posts():
-                        idx = loader_indices[current_loader]
-                        if idx >= max_posts:
-                            break
-                        if post.shortcode in processed_ids:
-                            continue
+                post_info = {
+                    "username": profile_name,
+                    "content": "",
+                    "metadata": {
+                        "likes": post.likes,
+                        "comments": post.comments,
+                        "views": post.video_view_count if post.is_video else 0,
+                        "timestamp": post.date.strftime("%Y-%m-%d %H:%M:%S"),
+                        "hashtags": extract_hashtags(post.caption),
+                        "location": post.location.name if post.location else "",
+                        "music": post.music_title if hasattr(post, 'music_title') else "",
+                        "post_id": post.shortcode,
+                        "type": post_type,
+                        "urls": post_urls,
+                        "caption": clean_caption(post.caption),
+                        "username": profile_name
+                    }
+                }
 
-                        post_type = "Carousel" if post.typename == "GraphSidecar" else "Reel" if post.is_video else "Image"
-                        post_urls = [node.display_url for node in post.get_sidecar_nodes()] if post_type == "Carousel" else [post.url]
+                write_queue.put(post_info)
+                shared_processed_ids.add(post.shortcode)
+                current_post_index += 1
+                posts_fetched += 1
 
-                        post_info = {
-                            "username": profile_name,
-                            "content": "",
-                            "metadata": {
-                                "likes": post.likes,
-                                "comments": post.comments,
-                                "views": post.video_view_count if post.is_video else 0,
-                                "timestamp": post.date.strftime("%Y-%m-%d %H:%M:%S"),
-                                "hashtags": extract_hashtags(post.caption),
-                                "location": post.location.name if post.location else "",
-                                "music": post.music_title if hasattr(post, 'music_title') else "",
-                                "post_id": post.shortcode,
-                                "type": post_type,
-                                "urls": post_urls,
-                                "caption": clean_caption(post.caption),
-                                "username": profile_name
-                            }
-                        }
+                # Random delay to avoid detection
+                if random.random() < 0.2:
+                    time.sleep(random.uniform(2, 5))
 
-                        write_queue.put(post_info)  # Add post to queue
-                        processed_ids.add(post.shortcode)
-                        loader_indices[current_loader] += 1
-                        progress_bar.update(1)
+        except instaloader.exceptions.TooManyRequestsException:
+            logger.warning(f"Rate limit for {profile_name} on {'primary' if loader_pair.current_index == 0 else 'secondary'} loader")
+            loader_pair.switch_loader()
+            retries += 1
+            if retries < max_retries:
+                logger.info(f"Switching loader for {profile_name}")
+            else:
+                logger.error(f"All loaders exhausted for {profile_name}")
+                break
+                
+        except Exception as e:
+            logger.error(f"Error fetching chunk for {profile_name}: {e}")
+            loader_pair.switch_loader()
+            retries += 1
+            if retries < max_retries:
+                logger.info(f"Switching loader due to error for {profile_name}")
+            else:
+                break
 
-                        if random.random() < 0.2:
-                            delay = random.uniform(2, 5)
-                            logger.info(f"Random delay of {delay:.2f} seconds.")
-                            time.sleep(delay)
+    return posts_fetched
 
-                        if loader_indices[current_loader] % 10 == 0:
-                            current_loader = (current_loader + 1) % len(loaders)
-
-                except instaloader.exceptions.TooManyRequestsException:
-                    logger.warning(f"Rate limit reached for '{profile_name}' using loader {current_loader}. Switching loaders...")
-                    current_loader = (current_loader + 1) % len(loaders)
-
-        logger.info(f"Data for {profile_name} fetched successfully.")
-
-    except instaloader.exceptions.ProfileNotExistsException:
-        logger.warning(f"The profile '{profile_name}' does not exist.")
-
-    except Exception as e:
-        logger.error(f"Error fetching data for '{profile_name}': {e}")
-
-def fetch_posts_parallel(profiles, max_posts=1000, output_file="./sample_data/all_influencers_data.json", num_workers=10, num_loaders=50):
-    # Initialize loaders
-    loaders = [instaloader.Instaloader(rate_controller=lambda ctx: CustomRateController(ctx)) for _ in range(num_loaders)]
-
-    # Distribute loaders among workers
-    loaders_per_worker = max(1, num_loaders // num_workers)
-    profile_batches = [profiles[i::num_workers] for i in range(num_workers)]
-
-    with ThreadPoolExecutor(max_workers=num_workers) as executor:
-        futures = {
-            executor.submit(
-                fetch_posts_for_profiles_batch,
-                loaders[i * loaders_per_worker: (i + 1) * loaders_per_worker],
-                profile_batch,
-                max_posts
-            ): i for i, profile_batch in enumerate(profile_batches)
-        }
-
-        with tqdm(total=len(profiles), desc="Fetching Profiles") as pbar:
-            for future in as_completed(futures):
-                try:
-                    future.result()
-                    pbar.update(len(profile_batches[futures[future]]))
-                except Exception as exc:
-                    logger.error(f"Error in worker {futures[future]}: {exc}")
-                    pbar.update(len(profile_batches[futures[future]]))
-
-def fetch_posts_for_profiles_batch(loaders, profiles, max_posts):
+def process_profile_batch(loader_pairs: List[LoaderPair], profiles: List[str], 
+                         max_posts: int, shared_processed_ids: Set[str]):
+    """Process a batch of profiles using multiple loader pairs"""
+    posts_per_profile = max_posts
+    chunks_per_profile = len(loader_pairs)
+    chunk_size = ceil(posts_per_profile / chunks_per_profile)
+    
     for profile in profiles:
-        fetch_posts_for_profile(loaders, profile, max_posts)
+        chunks = [(i * chunk_size, min((i + 1) * chunk_size, posts_per_profile)) 
+                 for i in range(chunks_per_profile)]
+        
+        with ThreadPoolExecutor(max_workers=chunks_per_profile) as executor:
+            futures = []
+            
+            with tqdm(total=posts_per_profile, desc=f"Fetching {profile}") as progress_bar:
+                for i, (start, end) in enumerate(chunks):
+                    future = executor.submit(
+                        fetch_profile_chunk,
+                        loader_pairs[i],
+                        profile,
+                        start,
+                        end,
+                        write_queue,
+                        shared_processed_ids
+                    )
+                    futures.append(future)
+                
+                for future in as_completed(futures):
+                    try:
+                        posts_fetched = future.result()
+                        progress_bar.update(posts_fetched)
+                    except Exception as e:
+                        logger.error(f"Error in worker: {e}")
+
+def fetch_posts_parallel(profiles: List[str], max_posts: int = 1000,
+                        output_file: str = "./sample_data/all_influencers_data.json",
+                        num_workers: int = 5, pairs_per_worker: int = 2):
+    """Main function to fetch posts from multiple profiles in parallel"""
+    shared_processed_ids = set()
+    write_queue = queue.Queue()
+    
+    # Start writer thread
+    writer = threading.Thread(target=writer_thread, args=(output_file,), daemon=True)
+    writer.start()
+    
+    # Create loader pairs for each worker
+    all_loader_pairs = [
+        [LoaderPair(
+            instaloader.Instaloader(rate_controller=lambda ctx: CustomRateController(ctx)),
+            instaloader.Instaloader(rate_controller=lambda ctx: CustomRateController(ctx))
+        ) for _ in range(pairs_per_worker)]
+        for _ in range(num_workers)
+    ]
+    
+    # Split profiles into batches
+    profile_batches = [profiles[i::num_workers] for i in range(num_workers)]
+    
+    with ThreadPoolExecutor(max_workers=num_workers) as executor:
+        futures = []
+        for i, profile_batch in enumerate(profile_batches):
+            future = executor.submit(
+                process_profile_batch,
+                all_loader_pairs[i],
+                profile_batch,
+                max_posts,
+                shared_processed_ids
+            )
+            futures.append(future)
+        
+        for future in as_completed(futures):
+            try:
+                future.result()
+            except Exception as e:
+                logger.error(f"Batch processing error: {e}")
+    
+    # Signal writer thread to finish
+    write_queue.put(None)
+    writer.join()
+    
+    logger.info(f"Completed fetching {len(profiles)} profiles")
+    logger.info(f"Total unique posts: {len(shared_processed_ids)}")
 
 if __name__ == "__main__":
+    top_influencers = [
+        "instagram", "cristiano", "leomessi", "selenagomez", "kyliejenner",
+        "therock", "arianagrande", "kimkardashian", "beyonce", "khloekardashian",
+        # ... rest of the influencers list
+    ]
+    
     logger.info("Starting data fetch for top influencers...")
-
-    # Start writer thread
-    writer = threading.Thread(target=writer_thread, args=("./sample_data/all_influencers_data.json",), daemon=True)
-    writer.start()
-
-    try:
-        fetch_posts_parallel(top_influencers, max_posts=1000, num_workers=34, num_loaders=60)
-    finally:
-        # Signal writer thread to finish
-        write_queue.put(None)
-        writer.join()
-
-    logger.info("All data fetching complete. File saved in './sample_data/all_influencers_data.json'.")
+    
+    fetch_posts_parallel(
+        profiles=top_influencers,
+        max_posts=1000,
+        num_workers=5,
+        pairs_per_worker=2
+    )
+    
+    logger.info("All data fetching complete.")

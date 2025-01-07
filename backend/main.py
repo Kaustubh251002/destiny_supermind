@@ -141,9 +141,7 @@ async def get_data(
                 logging.error("No data inserted into Astra DB.")
                 raise HTTPException(status_code=500, detail="No data inserted into Astra DB.")
 
-            # Retrieve the newly inserted data
-            data = get_astra_data(username, count, COLLECTION_NAME)
-            result = [doc for doc in data]
+            result = json_data
 
 
         logging.info(f"Successfully fetched data for username: {username}")
