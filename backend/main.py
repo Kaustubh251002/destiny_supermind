@@ -124,6 +124,8 @@ async def get_data(
                 with open("./live_data/data.json", "r") as file:
                     json_data = json.load(file)
 
+                # delete the file after loading
+                os.remove("./live_data/data.json")
                 if not json_data:
                     logging.error("No data fetched from Instagram.")
                     raise HTTPException(status_code=500, detail="No data fetched from Instagram.")
