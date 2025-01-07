@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import os
 from dotenv import load_dotenv
 from astrapy import DataAPIClient
-from insta_fetch import fetch_posts_parallel
+from insta_fetch import fetch_posts_parallel_no_timeout
 import uuid
 import json
 import logging
@@ -33,6 +33,8 @@ DATASTAX_API_ENDPOINT = os.getenv("DATASTAX_API_ENDPOINT")
 COLLECTION_NAME = "instagram"
 DATA_COUNT = 1000
 INSTALOADER_FETCH_COUNT = 100
+MAX_WORKERS = 10
+MAX_LOADERS = 10
 
 # Initialize Astra DB client
 try:
@@ -108,18 +110,22 @@ async def get_data(
         # If no data is found, fetch from Instagram
         if not result:
             logging.warning(f"No data found for username '{username}' in Astra DB. Fetching from Instagram.")
-            fetch_posts_parallel(
+            fetch_posts_parallel_no_timeout(
                 [username],
                 max_posts=INSTALOADER_FETCH_COUNT,
                 output_file="./live_data/data.json",
-                num_workers=10,
-                num_loaders=10
+                num_workers=MAX_WORKERS,
+                num_loaders=MAX_LOADERS
             )
 
             # Load fetched data from file
             try:
                 with open("./live_data/data.json", "r") as file:
                     json_data = json.load(file)
+
+                if not json_data:
+                    logging.error("No data fetched from Instagram.")
+                    raise HTTPException(status_code=500, detail="No data fetched from Instagram.")
             except Exception as e:
                 logging.error(f"Error loading fetched data: {e}")
                 raise HTTPException(status_code=500, detail="Error loading fetched data.")

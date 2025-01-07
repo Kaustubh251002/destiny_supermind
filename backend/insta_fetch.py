@@ -207,6 +207,95 @@ def fetch_posts_for_profiles_batch(loaders, profiles, max_posts):
     for profile in profiles:
         fetch_posts_for_profile(loaders, profile, max_posts)
 
+
+def fetch_posts_for_profile_no_timeout(loaders, profile_name, max_posts=1000, output_file="./sample_data/single_profile_data.json", processed_ids=None):
+    processed_ids = processed_ids or set()
+    loader_indices = [0] * len(loaders)
+    current_loader = 0
+
+    try:
+        profile = instaloader.Profile.from_username(loaders[current_loader].context, profile_name)
+
+        with tqdm(total=max_posts, desc=f"Fetching posts for {profile_name}") as progress_bar:
+            while loader_indices[current_loader] < max_posts:
+                try:
+                    for post in profile.get_posts():
+                        idx = loader_indices[current_loader]
+                        if idx >= max_posts:
+                            break
+                        if post.shortcode in processed_ids:
+                            continue
+
+                        post_type = "Carousel" if post.typename == "GraphSidecar" else "Reel" if post.is_video else "Image"
+                        post_urls = [node.display_url for node in post.get_sidecar_nodes()] if post_type == "Carousel" else [post.url]
+
+                        post_info = {
+                            "username": profile_name,
+                            "content": "",
+                            "metadata": {
+                                "likes": post.likes,
+                                "comments": post.comments,
+                                "views": post.video_view_count if post.is_video else 0,
+                                "timestamp": post.date.strftime("%Y-%m-%d %H:%M:%S"),
+                                "hashtags": extract_hashtags(post.caption),
+                                "location": post.location.name if post.location else "",
+                                "music": post.music_title if hasattr(post, 'music_title') else "",
+                                "post_id": post.shortcode,
+                                "type": post_type,
+                                "urls": post_urls,
+                                "caption": clean_caption(post.caption),
+                                "username": profile_name
+                            }
+                        }
+
+                        write_queue.put(post_info)  # Add post to queue
+                        processed_ids.add(post.shortcode)
+                        loader_indices[current_loader] += 1
+                        progress_bar.update(1)
+
+                        if loader_indices[current_loader] % 10 == 0:
+                            current_loader = (current_loader + 1) % len(loaders)
+
+                except instaloader.exceptions.TooManyRequestsException:
+                    logger.warning(f"Rate limit reached for '{profile_name}' using loader {current_loader}. Switching loaders...")
+                    current_loader = (current_loader + 1) % len(loaders)
+
+        logger.info(f"Data for {profile_name} fetched successfully.")
+
+    except instaloader.exceptions.ProfileNotExistsException:
+        logger.warning(f"The profile '{profile_name}' does not exist.")
+
+    except Exception as e:
+        logger.error(f"Error fetching data for '{profile_name}': {e}")
+
+def fetch_posts_parallel_no_timeout(profile, max_posts=1000, output_file="./sample_data/all_influencers_data.json", num_workers=10, num_loaders=50):
+    # Initialize loaders
+    loaders = [instaloader.Instaloader(rate_controller=lambda ctx: CustomRateController(ctx)) for _ in range(num_loaders)]
+
+    # Start a single writer thread
+    write_queue = queue.Queue()
+    writer = threading.Thread(target=writer_thread, args=(output_file,), daemon=True)
+    writer.start()
+
+    with ThreadPoolExecutor(max_workers=num_workers) as executor:
+        future = executor.submit(
+            fetch_posts_for_profile_no_timeout,
+            loaders,
+            profile,
+            max_posts,
+            output_file
+        )
+
+        try:
+            future.result()
+        except Exception as exc:
+            logger.error(f"Error fetching data for profile '{profile}': {exc}")
+
+    # Signal writer thread to finish
+    write_queue.put(None)
+    writer.join()
+
+
 if __name__ == "__main__":
     logger.info("Starting data fetch for top influencers...")
 
