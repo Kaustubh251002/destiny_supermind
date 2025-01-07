@@ -3,7 +3,7 @@
 import { useUserContext } from "../../context/UserContext";
 import Navbar from "../../components/Dashboard/Navbar";
 import PerformanceOverview from "../../components/Dashboard/PerformanceOverview";
-import AIChat from "../../components/Dashboard/AIChat";
+import TopPostAndEngagement from "@/components/Dashboard/TopPostAndEngagement";
 
 const Dashboard = () => {
   // Access user context data
@@ -11,11 +11,11 @@ const Dashboard = () => {
 
   if (!metadata) {
     return (
-      <div className="min-h-screen bg-gray-100">
+      <div className="min-h-screen bg-gray-100 flex flex-col">
         <Navbar />
-        <main className="pt-20 px-4 lg:px-8 h-screen flex flex-col lg:flex-row gap-6">
+        <main className="flex-grow flex items-center justify-center">
           <p className="text-xl text-gray-600">No user data found. Please switch user.</p>
-          </main>
+        </main>
       </div>
     );
   }
@@ -23,16 +23,16 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-gray-100">
       <Navbar />
-      <main className="pt-20 px-4 lg:px-8 h-screen flex flex-col lg:flex-row gap-6">
-        {/* Left Section */}
-        <div className="lg:w-3/4 flex flex-col gap-6 h-full">
-          {/* Pass metadata to PerformanceOverview */}
+      <main className="pt-20 px-4 lg:px-8 grid grid-cols-1 lg:grid-cols-3 gap-6 p-6">
+        {/* Metrics and Insights Section */}
+        <div className="lg:col-span-3 bg-white shadow-md rounded-lg p-6 w-4/5">
           <PerformanceOverview data={metadata} />
         </div>
-
-        {/* Right Section */}
-        <div className="lg:w-1/4 flex-shrink-0 h-full">
-          <AIChat />
+        {/* Additional Metrics and Insights Section */}
+        <div className="lg:col-span-3 bg-white shadow-md rounded-lg p-6">
+          {/* Placeholder for future metrics and insights */}
+          <h2 className="text-xl font-bold mb-4">Additional Metrics & Insights</h2>
+          <TopPostAndEngagement posts={metadata} />
         </div>
       </main>
     </div>

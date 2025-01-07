@@ -15,6 +15,19 @@ const nextConfig = {
   env: {
     PUBLIC_BACKEND_URL_DEV: process.env.PUBLIC_BACKEND_URL_DEV,
   },
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https', // Or 'http' if needed
+        hostname: '*.fna.fbcdn.net', // The domain of your image
+      },
+      // {
+      //   protocol: 'https',
+      //   hostname: 'another-image-domain.net',
+      // },
+      // Add more domains as needed
+    ]
+  }
 };
 
 export default nextConfig;

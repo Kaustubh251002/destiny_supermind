@@ -1,8 +1,8 @@
-// components/Navbar.tsx
-'use client'
+'use client';
 import React, { useState } from "react";
 import { useUserContext } from "../../context/UserContext";
-import { fetchData } from  "../../utils/fetchData";
+import { fetchData } from "../../utils/fetchData";
+import AIChat from "../../components/Dashboard/AIChat";
 
 const Navbar = () => {
   const { currentUser, setUser } = useUserContext();
@@ -10,6 +10,7 @@ const Navbar = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [popoverOpen, setPopoverOpen] = useState(false);
+  const [aiChatOpen, setAiChatOpen] = useState(false);
 
   const handleUserSwitch = async () => {
     setLoading(true);
@@ -37,12 +38,27 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="fixed w-full z-10 px-4 py-3 flex justify-between items-center bg-opacity-60 backdrop-blur-md">
+    <nav className="fixed w-full z-10 px-4 py-3 flex justify-between items-center bg-white bg-opacity-60 backdrop-blur-md shadow-md">
       <div className="flex items-center space-x-2">
         <i className="bi bi-graph-up-arrow text-2xl text-blue-600"></i>
         <span className="text-xl font-bold text-blue-600">InstaBuddy</span>
       </div>
-      <div className="relative">
+      <div className="relative flex items-center space-x-4">
+        {/* Open AI Chat Popover */}
+        <button
+          className="px-4 py-2 rounded-full bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-600"
+          onClick={() => setAiChatOpen(!aiChatOpen)}
+        >
+          Get answers thorugh AI!
+        </button>
+
+        {aiChatOpen && (
+          <div className="absolute top-12 right-0 bg-white p-4 rounded-lg shadow-lg w-96 z-20">
+            <AIChat />
+          </div>
+        )}
+
+        {/* Switch User Popover */}
         <button
           className="px-4 py-2 rounded-full bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-600"
           onClick={() => setPopoverOpen(!popoverOpen)}

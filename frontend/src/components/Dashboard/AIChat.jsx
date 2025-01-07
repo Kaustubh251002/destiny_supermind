@@ -27,15 +27,15 @@ const AIChat = () => {
 
   return (
     <div className="rounded-xl p-6 bg-opacity-60 backdrop-blur-md">
-      <h2 className="text-xl font-semibold mb-4">AI Assistant</h2>
+      <h2 className="text-l font-semibold mb-4">AI Assistant</h2>
       <div className="chat-container mb-4" style={{ height: '400px', overflowY: 'auto' }}>
         {messages.map((msg, index) => (
           <div
             key={index}
-            className={`flex flex-col space-y-1 ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}
+            className={`flex flex-col space-y-1 ${msg.sender === 'user' ? 'items-end' : 'items-start'} text-sm`}
           >
             <div
-              className={`rounded-lg p-3 max-w-[80%] ${msg.sender === 'user' ? 'bg-blue-600 text-white' : 'bg-blue-100 text-gray-800'}`}
+              className={`rounded-lg p-3 max-w-[90%] ${msg.sender === 'user' ? 'bg-blue-600 text-white' : 'bg-blue-100 text-gray-800'}`}
             >
               {msg.text}
             </div>
@@ -45,14 +45,14 @@ const AIChat = () => {
       <div className="flex space-x-2">
         <input
           type="text"
-          className="flex-1 px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="flex-1 px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
           placeholder="Ask me anything..."
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
         />
         <button onClick={sendMessage} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
-          <i className="bi bi-send"></i>
+          <i className="fa fa-paper-plane"></i>
         </button>
       </div>
     </div>
