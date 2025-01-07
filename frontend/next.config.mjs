@@ -20,6 +20,7 @@ const nextConfig = {
   // Expose environment variables to the client
   env: {
     PUBLIC_BACKEND_URL_DEV: process.env.PUBLIC_BACKEND_URL_DEV,
+    PORT: process.env.PORT || 3000 // Use the PORT environment variable if set, otherwise default to 3000
   },
 };
 
