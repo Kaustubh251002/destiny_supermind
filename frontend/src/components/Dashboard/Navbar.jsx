@@ -16,9 +16,9 @@ const Navbar = () => {
     setError("");
 
     try {
-      const data = await fetchData(newUserID);
+      const data = await fetchData(newUserID, 1000);
       if (data) {
-        setUser(newUserID, data.metadata);
+        setUser(newUserID, data);
         setPopoverOpen(false); // Auto-close the popover
       } else {
         setError("User not found");

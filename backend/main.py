@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Query, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 import os
 from dotenv import load_dotenv
 from astrapy import DataAPIClient
@@ -8,13 +9,23 @@ import json
 import logging
 
 # Load environment variables
-load_dotenv()
+load_dotenv('../.env')
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Initialize FastAPI app
 app = FastAPI(title="Instagram Data Insights API", description="API for fetching and analyzing Instagram data.")
+
+#Allow access from local frontend server
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 # Load environment variables
 ASTRADB_TOKEN = os.getenv("ASTRADB_TOKEN")

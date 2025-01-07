@@ -1,18 +1,33 @@
-'use client'
+'use client';
 
+import { useUserContext } from "../../context/UserContext";
 import Navbar from "../../components/Dashboard/Navbar";
 import PerformanceOverview from "../../components/Dashboard/PerformanceOverview";
 import AIChat from "../../components/Dashboard/AIChat";
-import tempData from "D:/stuff/dev/ig-profile-data/output.json" assert {type: "json"};
 
 const Dashboard = () => {
+  // Access user context data
+  const { metadata, currentUser } = useUserContext();
+
+  if (!metadata) {
+    return (
+      <div className="min-h-screen bg-gray-100">
+        <Navbar />
+        <main className="pt-20 px-4 lg:px-8 h-screen flex flex-col lg:flex-row gap-6">
+          <p className="text-xl text-gray-600">No user data found. Please switch user.</p>
+          </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-100">
       <Navbar />
       <main className="pt-20 px-4 lg:px-8 h-screen flex flex-col lg:flex-row gap-6">
         {/* Left Section */}
         <div className="lg:w-3/4 flex flex-col gap-6 h-full">
-          <PerformanceOverview data={tempData}/>
+          {/* Pass metadata to PerformanceOverview */}
+          <PerformanceOverview data={metadata} />
         </div>
 
         {/* Right Section */}

@@ -1,37 +1,24 @@
-// utils/fetchData.ts
-import { DataAPIClient } from "@datastax/astra-db-ts";
-
-const token = process.env.ASTRA_DB_APPLICATION_TOKEN as string;
-const endpoint = process.env.ASTRA_DB_API_ENDPOINT as string;
-const collectionName = "insta_json_metadata";
-
-// Utility function to fetch user metadata
-export const fetchData = async (userID: string) => {
+export const fetchData = async (username, count) => {
   try {
-    // Initialize Astra DB client
-    const client = new DataAPIClient(token);
-    const database = client.db(endpoint);
-    const collection = database.collection(collectionName);
+    const backendUrl = process.env.PUBLIC_BACKEND_URL_DEV;
 
-    // Query for the user metadata by $vectorize field
-    const query = { $vectorize: userID };
-    const userMetadata = await collection.findOne(query);
-
-    // Close the client after use
-    await client.close();
-
-    // Return the filtered metadata if it exists
-    if (userMetadata) {
-      return {
-        username: userMetadata.$vectorize,
-        metadata: userMetadata.metadata,
-      };
+    if (!backendUrl) {
+      throw new Error("Backend URL is not defined in the .env file.");
     }
 
-    // If no user found, return null
-    return null;
+    const response = await fetch(
+      `${backendUrl}/getData?username=${encodeURIComponent(username)}&count=${count}`
+    );
+
+    if (!response.ok) {
+      throw new Error(`Error fetching data`);
+    }
+
+    const data = await response.json();
+    console.log(data);
+    return data;
   } catch (error) {
-    console.error("Error fetching user metadata:", error);
-    throw new Error("Unable to fetch user metadata");
+    console.error("Error in fetchData:", error);
+    throw error;
   }
 };
