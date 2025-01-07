@@ -9,8 +9,10 @@ import uuid
 import json
 import logging
 
-# Load environment variables
-load_dotenv('../.env')
+if os.path.exists('../.env'):
+    load_dotenv('../.env')
+else:
+    load_dotenv()
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

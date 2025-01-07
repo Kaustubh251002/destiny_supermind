@@ -1,5 +1,6 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 import dotenv from 'dotenv';
 
 // Fix for __dirname in ES modules
@@ -7,7 +8,12 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Load environment variables from the parent `.env` file
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
+const envPath = path.resolve(__dirname, '../.env');
+if (fs.existsSync(envPath)) {
+  dotenv.config({ path: envPath });
+} else {
+  dotenv.config(); // Load environment variables from the system
+}
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {

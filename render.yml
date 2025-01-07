@@ -1,0 +1,29 @@
+services:
+  - name: backend
+    type: web
+    env: docker
+    dockerfilePath: ./backend/Dockerfile
+    buildCommand: ""  # Optional, since it's in the Dockerfile
+    startCommand: uvicorn main:app --host 0.0.0.0 --port 8000
+    envVars:
+      - key: UVICORN_WORKERS
+        value: "4"
+    mounts:
+      - type: volume
+        source: ./backend
+        target: /app
+    ports:
+      - 8000
+
+  - name: frontend
+    type: web
+    env: docker
+    dockerfilePath: ./frontend/Dockerfile
+    buildCommand: ""  # Optional, since it's in the Dockerfile
+    startCommand: npm run dev
+    mounts:
+      - type: volume
+        source: ./frontend
+        target: /app
+    ports:
+      - 3000
