@@ -2,3 +2,4 @@ langflow
 langchain
 instaloader
 fastapi
+google-generativeai
