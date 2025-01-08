@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { Calendar, Clock, Hash, Video, Image as ImageIcon, TrendingUp, ArrowUp, ArrowDown } from 'lucide-react';
 
-const TopPostAndEngagement = ({ posts }) => {
+const TopPostAndEngagement = ({ username, posts }) => {
   if (!posts || posts.length === 0) return <div>No data available</div>;
+
+  const [hoveredBar, setHoveredBar] = useState(null);
 
   const getWeekNumber = (date) => {
     const currentDate = new Date(date);
@@ -13,7 +15,7 @@ const TopPostAndEngagement = ({ posts }) => {
   };
 
   const currentWeek = getWeekNumber(new Date());
-  
+
   const validViews = posts.filter(post => post.metadata.views > 0 && post.metadata.views !== null).map(post => post.metadata.views);
   const averageViews = validViews.length > 0 ? validViews.reduce((acc, view) => acc + view, 0) / validViews.length : 0;
 
@@ -44,7 +46,7 @@ const TopPostAndEngagement = ({ posts }) => {
   const engagementChange = (currentEngagementRate - previousEngagementRate).toFixed(2);
   const isEngagementUp = engagementChange > 0;
 
-  const topPost = posts.reduce((max, curr) => 
+  const topPost = posts.reduce((max, curr) =>
     curr.metadata.likes > max.metadata.likes ? curr : max, posts[0]);
   const [imageError, setImageError] = useState(false);
   const proxiedImageUrl = `/api/image-proxy?imageUrl=${encodeURIComponent(topPost.metadata.urls[0] || "")}`;
@@ -74,75 +76,87 @@ const TopPostAndEngagement = ({ posts }) => {
   const bestHour = engagementByHour.indexOf(Math.max(...engagementByHour));
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-3">
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-        <h2 className="text-base font-semibold text-gray-800 mb-3">Top Performing Post</h2>
-        
-        <div className="aspect-video relative rounded-lg overflow-hidden mb-3">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-4">
+      <div className="bg-white rounded-xl shadow-md border border-gray-200 p-5">
+        <h2 className="text-lg font-semibold text-gray-800 mb-4">Top Performing Post</h2>
+
+        <div className="aspect-video relative rounded-lg overflow-hidden bg-gray-100 mb-4">
           {imageError ? (
-            <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-500 font-semibold p-4 rounded-lg text-center">
+            <div className="w-full h-full flex items-center justify-center text-gray-500 font-medium text-center p-4">
               <p>
-                Unable to render the top post image (Blocked by Instagram CORS policy). You may search the shortcode below on Google to find the top post.
+                Unable to display the top post image due to CORS restrictions. Search the shortcode below for more details.
               </p>
             </div>
           ) : (
             <img
               src={proxiedImageUrl || "/api/placeholder/400/400"}
               alt="Top Post"
-              className="object-cover w-full h-full"
-              style={{ objectFit: 'cover', objectPosition: 'center' }}
+              className="w-full h-full"
+              style={{ objectFit: 'contain', objectPosition: 'center' }}
             />
           )}
         </div>
-        
-        <div className="space-y-2">
+
+        <div className="space-y-3">
           <div className="text-center p-2 bg-gradient-to-br from-yellow-50 to-orange-50 rounded-lg">
-            <div className="font-semibold text-yellow-600 text-sm">
-              {topPost.metadata.post_id || "No Shortcode"}
-            </div>
-            <div className="text-xs text-gray-500">Shortcode</div>
+            {username && topPost.metadata.post_id ? (
+              <a
+                href={`https://www.instagram.com/${username}/p/${topPost.metadata.post_id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-yellow-600 text-sm hover:underline"
+              >
+                View Post
+              </a>
+            ) : (
+              <div className="font-semibold text-yellow-600 text-sm">
+                {topPost.metadata.post_id || "No Shortcode"}
+              </div>
+            )}
+            <div className="text-xs text-gray-500">{topPost.metadata.post_id}</div>
           </div>
-          
+
+
           <div className="grid grid-cols-3 gap-3">
-            <div className="text-center p-2 bg-gradient-to-br from-indigo-50 to-blue-50 rounded-lg">
-              <div className="font-semibold text-indigo-600 text-sm">
+            <div className="text-center p-3 bg-gradient-to-br from-indigo-50 to-blue-50 rounded-lg">
+              <div className="font-semibold text-indigo-600">
                 {topPost.metadata.likes.toLocaleString()}
               </div>
               <div className="text-xs text-gray-500">Likes</div>
             </div>
-            <div className="text-center p-2 bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg">
-              <div className="font-semibold text-purple-600 text-sm">
+            <div className="text-center p-3 bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg">
+              <div className="font-semibold text-purple-600">
                 {topPost.metadata.comments.toLocaleString()}
               </div>
               <div className="text-xs text-gray-500">Comments</div>
             </div>
-            <div className="text-center p-2 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-lg">
-              <div className="font-semibold text-emerald-600 text-sm">
+            <div className="text-center p-3 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-lg">
+              <div className="font-semibold text-emerald-600">
                 {((topPost.metadata.likes / safeViewsForPost(topPost.metadata.views)) * 100).toFixed(1)}%
               </div>
-              <div className="text-xs text-gray-500">Eng. Rate</div>
+              <div className="text-xs text-gray-500">Engagement Rate</div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-        <h2 className="text-base font-semibold text-gray-800 mb-3">Analytics Overview</h2>
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="p-3 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg">
-            <div className="flex items-center gap-2 mb-1">
+      <div className="bg-white rounded-xl shadow-md border border-gray-200 p-5">
+        <h2 className="text-lg font-semibold text-gray-800 mb-4 pt-5">Analytics Overview</h2>
+        <div className="grid grid-cols-2 gap-4 mb-5">
+          <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
               <TrendingUp className="text-blue-500" size={16} />
               <span className="text-xs text-gray-600">Weekly Engagement</span>
             </div>
             <div className="flex items-baseline gap-2">
               <span className="text-lg font-semibold text-gray-800">{currentEngagementRate}%</span>
-              <span className={`text-xs ${isEngagementUp ? 'text-emerald-600' : 'text-red-600'}`}>
+              <span className={`text-sm ${isEngagementUp ? 'text-emerald-600' : 'text-red-600'}`}>
                 {isEngagementUp ? '↑' : '↓'} {Math.abs(engagementChange)}%
               </span>
             </div>
           </div>
-          <div className="p-3 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-lg">
-            <div className="flex items-center gap-2 mb-1">
+          <div className="p-4 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
               <Clock className="text-emerald-500" size={16} />
               <span className="text-xs text-gray-600">Best Time</span>
             </div>
@@ -150,14 +164,37 @@ const TopPostAndEngagement = ({ posts }) => {
           </div>
         </div>
 
-        <div>
+        <div className="pt-10">
           <h3 className="text-sm font-medium text-gray-700 mb-3">Engagement By Hour</h3>
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={hourlyData}>
               <XAxis dataKey="hour" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="engagement" fill="#4B87A4" />
+              <YAxis
+                tickFormatter={(value) =>
+                  value >= 1_000_000
+                    ? `${(value / 1_000_000).toFixed(1)}M`
+                    : value >= 1_000
+                      ? `${(value / 1_000).toFixed(1)}K`
+                      : value
+                }
+              />
+              <Tooltip
+                formatter={(value) =>
+                  value >= 1_000_000
+                    ? `${(value / 1_000_000).toFixed(1)}M`
+                    : value >= 1_000
+                      ? `${(value / 1_000).toFixed(1)}K`
+                      : value
+                }
+              />
+              <Bar dataKey="engagement" fill="#4B87B4">
+                {hourlyData.map((entry, index) => (
+                  <Cell
+                    key={`cell-${index}`}
+                    className="hover:scale-y-105 transition-transform duration-200 ease-in-out origin-bottom"
+                  />
+                ))}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>

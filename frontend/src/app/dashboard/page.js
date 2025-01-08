@@ -32,7 +32,7 @@ const Dashboard = () => {
         <div className="lg:col-span-3 bg-white shadow-md rounded-lg p-6">
           {/* Placeholder for future metrics and insights */}
           <h2 className="text-xl font-bold mb-4">Additional Metrics & Insights</h2>
-          <TopPostAndEngagement posts={metadata} />
+          <TopPostAndEngagement posts={metadata} username={currentUser}/>
         </div>
       </main>
     </div>
