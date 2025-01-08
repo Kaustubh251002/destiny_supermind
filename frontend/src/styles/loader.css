@@ -1,0 +1,59 @@
+@keyframes spin {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+  
+  @keyframes ping {
+    0% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    100% {
+      transform: scale(2);
+      opacity: 0;
+    }
+  }
+  
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+  
+  @keyframes bounce {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+  
+  .spin {
+    animation: spin 2.5s linear infinite;
+  }
+  
+  .ping {
+    animation: ping 2.5s ease-out infinite;
+    opacity: 0.75;
+  }
+  
+  .ping.delay {
+    animation-delay: 0.5s;
+  }
+  
+  .pulse {
+    animation: pulse 2.5s ease-in-out infinite;
+  }
+  
+  .bounce {
+    animation: bounce 2.5s ease-in-out infinite;
+  }
+  
