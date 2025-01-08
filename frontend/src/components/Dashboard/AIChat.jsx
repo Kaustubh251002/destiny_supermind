@@ -1,4 +1,3 @@
-// components/AIChat.js
 'use client'
 import React, { useState } from 'react';
 
@@ -26,32 +25,36 @@ const AIChat = () => {
   };
 
   return (
-    <div className="rounded-xl p-6 bg-opacity-60 backdrop-blur-md">
-      <h2 className="text-l font-semibold mb-4">AI Assistant</h2>
-      <div className="chat-container mb-4" style={{ height: '400px', overflowY: 'auto' }}>
+    <div className="rounded-xl p-6 bg-white bg-opacity-80 backdrop-blur-lg shadow-xl w-full max-w-4xl mx-auto">
+      <h2 className="text-xl font-semibold mb-4 text-gray-800">AI Assistant</h2>
+      <div className="chat-container mb-4 overflow-y-auto" style={{ maxHeight: '350px' }}>
         {messages.map((msg, index) => (
           <div
             key={index}
-            className={`flex flex-col space-y-1 ${msg.sender === 'user' ? 'items-end' : 'items-start'} text-sm`}
+            className={`flex flex-col space-y-4 ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}
           >
             <div
-              className={`rounded-lg p-3 max-w-[90%] ${msg.sender === 'user' ? 'bg-blue-600 text-white' : 'bg-blue-100 text-gray-800'}`}
+              className={`p-4 rounded-2xl max-w-[85%] ${msg.sender === 'user' ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white' : 'bg-blue-50 text-gray-700'}`}
+              style={{ marginBottom: '10px' }}
             >
               {msg.text}
             </div>
           </div>
         ))}
       </div>
-      <div className="flex space-x-2">
+      <div className="flex items-center space-x-3 mt-4">
         <input
           type="text"
-          className="flex-1 px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+          className="flex-1 px-4 py-3 rounded-2xl border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-800"
           placeholder="Ask me anything..."
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
         />
-        <button onClick={sendMessage} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <button
+          onClick={sendMessage}
+          className="p-3 bg-blue-600 text-white rounded-2xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300"
+        >
           <i className="fa fa-paper-plane"></i>
         </button>
       </div>
