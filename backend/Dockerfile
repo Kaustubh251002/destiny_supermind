@@ -11,9 +11,6 @@ RUN sh /uv-installer.sh && rm /uv-installer.sh
 
 # Ensure the installed binary is on the `PATH`
 ENV PATH="/root/.local/bin/:$PATH"
-RUN uv tool install cowsay
-
-WORKDIR /app
 
 # Upgrade pip and install the uv package manager
 RUN python -m pip install --upgrade pip 
