@@ -43,7 +43,7 @@ const Hero = () => {
           </button>
           
           <button
-            onClick={() => router.push('/demo')}
+            onClick={() => router.push('/')}
             className="secondary-button"
           >
             Watch Demo
