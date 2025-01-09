@@ -21,7 +21,7 @@ The `/api/v1/health` endpoint checks the system's health, ensuring the applicati
 
 ## 🏗️ **Architecture Breakdown**  
 
-![alt text](image-1.png)
+![alt text](images/image.png)
 
 ### 1. **User Interaction 👥**  
 * **Initiation:**  
