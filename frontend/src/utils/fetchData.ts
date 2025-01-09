@@ -22,8 +22,8 @@ export const fetchData = async (username, count) => {
     if (!response.ok) {
       // Log the HTTP status and response for debugging
       const errorText = await response.text();
-      console.error(`HTTP Error: ${response.status}`, errorText);
-      throw new Error(`Error fetching data: ${response.status}`);
+      console.log(`HTTP Error: ${response.status}`, errorText);
+      // throw new Error(`Error fetching data: ${response.status}`);
     }
 
     const data = await response.json();

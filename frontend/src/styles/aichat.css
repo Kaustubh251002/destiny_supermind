@@ -1,0 +1,14 @@
+.markdown-content a {
+    color: #1d4ed8; /* Tailwind 'blue-700' */
+    text-decoration: underline;
+  }
+  .markdown-content strong {
+    font-weight: bold;
+  }
+  .markdown-content code {
+    background-color: #f3f4f6; /* Tailwind 'gray-100' */
+    padding: 2px 4px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+  }
+  

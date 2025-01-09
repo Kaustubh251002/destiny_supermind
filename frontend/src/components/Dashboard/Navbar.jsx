@@ -55,6 +55,14 @@ const Navbar = () => {
     }
   };
 
+  const handleAIChatToggle = () => {
+    if (!currentUser) {
+      setError("Please select a user before accessing AI chat.");
+      return;
+    }
+    setAiChatOpen(!aiChatOpen);
+  };
+
   return (
     <>
       <nav className="sticky top-0 backdrop-blur-lg bg-white/75 z-50 px-6 py-4 flex justify-between items-center transition-all duration-300 ease-in-out">
@@ -67,8 +75,11 @@ const Navbar = () => {
         <div className="relative flex items-center space-x-6">
           {/* Open AI Chat Popover */}
           <button
-            className="px-6 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium rounded-full shadow-md hover:shadow-xl hover:scale-105 active:scale-95 transition-all duration-300"
-            onClick={() => setAiChatOpen(!aiChatOpen)}
+            className={`px-6 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium rounded-full shadow-md hover:shadow-xl hover:scale-105 active:scale-95 transition-all duration-300 ${
+              !currentUser ? "opacity-50 cursor-not-allowed" : ""
+            }`}
+            onClick={handleAIChatToggle}
+            disabled={!currentUser}
           >
             Get answers through AI!
           </button>
@@ -90,7 +101,7 @@ const Navbar = () => {
             ref={aiChatRef}
             className="relative w-100 h-70 bg-white rounded-xl overflow-hidden"
           >
-            <AIChat />
+            <AIChat username= {currentUser}/>
           </div>
         </div>
       )}

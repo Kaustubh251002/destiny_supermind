@@ -9,6 +9,10 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
+      <head>
+        <link rel="icon" href="/favicon.ico" type="image/x-icon" />
+        <title>InstaBuddy</title>
+      </head>
       <body>
         {/* Wrap the entire app in the UserProvider */}
         <UserProvider>

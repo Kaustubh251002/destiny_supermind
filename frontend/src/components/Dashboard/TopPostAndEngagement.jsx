@@ -104,7 +104,7 @@ const TopPostAndEngagement = ({ username, posts }) => {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-4">
       <div className="bg-white rounded-xl shadow-md border border-gray-200 p-5">
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">Top Performing Post</h2>
+        <h2 className="text-lg font-bold text-gray-800 mb-4">Top Performing Post</h2>
 
         <div className="aspect-video relative rounded-lg overflow-hidden bg-gray-100 mb-4">
           {imageError ? (
@@ -166,7 +166,7 @@ const TopPostAndEngagement = ({ username, posts }) => {
       </div>
 
       <div className="bg-white rounded-xl shadow-md border border-gray-200 p-5">
-        <h2 className="text-lg font-semibold text-gray-800 mb-4 pt-5">Analytics Overview</h2>
+        <h2 className="text-lg font-bold text-gray-800 mb-4 ">Analytics Overview</h2>
         <div className="grid grid-cols-2 gap-4 mb-5">
           <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg">
             <div className="flex items-center gap-2 mb-2">

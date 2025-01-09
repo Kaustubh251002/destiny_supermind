@@ -23,16 +23,19 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-gray-100">
       <Navbar />
-      <main className="pt-20 px-4 lg:px-8 grid grid-cols-1 lg:grid-cols-3 gap-6 p-6">
-        {/* Metrics and Insights Section */}
-        <div className="lg:col-span-3 bg-white shadow-md rounded-lg p-6 w-4/5">
-          <PerformanceOverview data={metadata} />
-        </div>
+      <main className="pt-10 px-4 lg:px-8 p-6">
         {/* Additional Metrics and Insights Section */}
         <div className="lg:col-span-3 bg-white shadow-md rounded-lg p-6">
           {/* Placeholder for future metrics and insights */}
-          <h2 className="text-xl font-bold mb-4">Additional Metrics & Insights</h2>
-          <TopPostAndEngagement posts={metadata} username={currentUser}/>
+          <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-700 to-indigo-700 bg-clip-text text-transparent">Metrics & Insights</h2>
+          <TopPostAndEngagement posts={metadata} username={currentUser} />
+        </div>
+        {/* Metrics and Insights Section */}
+        <div className="pt-3">
+          <div className="bg-white shadow-md rounded-lg p-6 w-full">
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-700 to-indigo-700 bg-clip-text text-transparent">Performance Overview</h2>
+            <PerformanceOverview data={metadata} />
+          </div> 
         </div>
       </main>
     </div>
