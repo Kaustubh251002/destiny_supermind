@@ -173,3 +173,9 @@ The `/api/v1/health` endpoint checks the system's health, ensuring the applicati
    cd backend/
    uvicorn main:app --reload
    ```  
+
+Alternatively, you can run the application using Docker:
+
+```bash
+docker-compose up --build
+```
