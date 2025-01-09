@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell, LineChart, Line, PieChart, Pie } from 'recharts';
 import { TrendingUp, Activity, Heart, MessageCircle, CalendarIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
@@ -7,7 +7,39 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Button } from "../ui/button";
 import { Calendar } from "../ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
-import { format, parseISO, startOfWeek, startOfMonth, isWithinInterval, subMonths } from 'date-fns';
+import { subMonths, parseISO, format, startOfWeek, startOfMonth, isWithinInterval } from 'date-fns';
+
+const calculateInitialDateRange = (data) => {
+  try {
+    const sortedDates = [...data]
+      .filter((item) => item?.metadata?.timestamp)
+      .sort((a, b) => new Date(a.metadata.timestamp) - new Date(b.metadata.timestamp));
+
+    if (sortedDates.length === 0) {
+      const today = new Date();
+      return {
+        from: subMonths(today, 12),
+        to: today,
+      };
+    }
+
+    const firstDate = parseISO(sortedDates[0].metadata.timestamp);
+    const lastDate = parseISO(sortedDates[sortedDates.length - 1].metadata.timestamp);
+
+    return {
+      from: firstDate,
+      to: lastDate,
+    };
+  } catch (error) {
+    console.error("Error calculating initial date range:", error);
+    const today = new Date();
+    return {
+      from: subMonths(today, 12),
+      to: today,
+    };
+  }
+};
+
 
 const DatePickerWithRange = ({ dateRange, onDateRangeChange }) => {
   if (!dateRange?.from || !dateRange?.to) return null;
@@ -90,42 +122,17 @@ const PerformanceOverview = ({ data }) => {
       </div>
     );
   }
-
-  // Initialize with full date range or default to last 6 months
-  const initialDateRange = useMemo(() => {
-    try {
-      const sortedDates = [...data]
-        .filter(item => item?.metadata?.timestamp)
-        .sort((a, b) => new Date(a.metadata.timestamp) - new Date(b.metadata.timestamp));
-
-      if (sortedDates.length === 0) {
-        const today = new Date();
-        return {
-          from: subMonths(today, 6),
-          to: today
-        };
-      }
-
-      const firstDate = parseISO(sortedDates[0].metadata.timestamp);
-      const lastDate = parseISO(sortedDates[sortedDates.length - 1].metadata.timestamp);
-
-      return {
-        from: firstDate,
-        to: lastDate
-      };
-    } catch (error) {
-      console.error('Error initializing date range:', error);
-      const today = new Date();
-      return {
-        from: subMonths(today, 6),
-        to: today
-      };
-    }
-  }, [data]);
-
+  
   const [timeframe, setTimeframe] = useState('week');
   const [activeTab, setActiveTab] = useState('overview');
-  const [dateRange, setDateRange] = useState(initialDateRange);
+  const [dateRange, setDateRange] = useState(calculateInitialDateRange(data));
+  
+  // Update dateRange when data changes
+  useEffect(() => {
+    const newDateRange = calculateInitialDateRange(data);
+    setDateRange(newDateRange);
+  }, [data]);
+  
 
   // If date range is not properly initialized, show error state
   if (!dateRange?.from || !dateRange?.to) {
@@ -151,15 +158,15 @@ const PerformanceOverview = ({ data }) => {
 
       if (timeframe === 'day') {
         key = format(date, 'yyyy-MM-dd');
-        displayDate = format(date, 'MMM dd');
+        displayDate = format(date, "MMM dd ''yy"); // Updated format to include year
       } else if (timeframe === 'week') {
         const weekStart = startOfWeek(date);
         key = format(weekStart, 'yyyy-MM-dd');
-        displayDate = `Week of ${format(weekStart, 'MMM dd')}`;
+        displayDate = `Week of ${format(weekStart, "MMM dd ''yy")}`; // Updated format to include year
       } else if (timeframe === 'month') {
         const monthStart = startOfMonth(date);
         key = format(monthStart, 'yyyy-MM');
-        displayDate = format(monthStart, 'MMM yyyy');
+        displayDate = format(monthStart, "MMM ''yy"); // Updated format to include year
       }
 
       if (!acc[key]) {
