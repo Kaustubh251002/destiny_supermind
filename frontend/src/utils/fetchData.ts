@@ -1,6 +1,6 @@
 export const fetchData = async (username, count) => {
   try {
-    const backendUrl = process.env.PUBLIC_BACKEND_URL_DEV;
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
 
     if (!backendUrl) {
       throw new Error("Backend URL is not defined in the .env file.");
