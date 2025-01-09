@@ -1,10 +1,24 @@
+# Use a more specific node version
 FROM node:latest
 
+# Install dependencies
 COPY package*.json ./
-RUN npm install
+RUN npm ci --only=production
 
-COPY . .
+# Copy only necessary files
+COPY . . 
 
+# Build the application
+RUN npm run build
+
+# Remove development dependencies
+RUN npm prune --production
+
+# Set environment variables
+ENV NEXT_TELEMETRY_DISABLED 1
+
+# Expose the running port
 EXPOSE 3000
 
-CMD ["npm", "run", "start"]
+# Start the application
+CMD ["npm", "start"]

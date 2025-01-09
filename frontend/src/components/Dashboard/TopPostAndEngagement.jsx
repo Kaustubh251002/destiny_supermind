@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { Calendar, Clock, Hash, Video, Image as ImageIcon, TrendingUp, ArrowUp, ArrowDown } from 'lucide-react';
+import { Clock, TrendingUp } from 'lucide-react';
 
 const TopPostAndEngagement = ({ username, posts }) => {
   if (!posts || posts.length === 0) return <div>No data available</div>;
 
   const [hoveredBar, setHoveredBar] = useState(null);
+  const [imageError, setImageError] = useState(false);
+  const [useProxy, setUseProxy] = useState(false);
 
   const getWeekNumber = (date) => {
     const currentDate = new Date(date);
@@ -48,15 +50,39 @@ const TopPostAndEngagement = ({ username, posts }) => {
 
   const topPost = posts.reduce((max, curr) =>
     curr.metadata.likes > max.metadata.likes ? curr : max, posts[0]);
-  const [imageError, setImageError] = useState(false);
-  const proxiedImageUrl = `/api/image-proxy?imageUrl=${encodeURIComponent(topPost.metadata.urls[0] || "")}`;
+  
+  const directImageUrl = topPost.metadata.urls[0] || "";
+  const proxiedImageUrl = `/api/image-proxy?imageUrl=${encodeURIComponent(directImageUrl)}`;
 
   useEffect(() => {
-    const img = new Image();
-    img.onload = () => setImageError(false);
-    img.onerror = () => setImageError(true);
-    img.src = proxiedImageUrl;
-  }, [proxiedImageUrl]);
+    const loadImage = async () => {
+      // First try loading the image directly
+      const img = new Image();
+      
+      img.onload = () => {
+        setImageError(false);
+        setUseProxy(false);
+      };
+      
+      img.onerror = () => {
+        // If direct loading fails, try with proxy
+        const proxyImg = new Image();
+        proxyImg.onload = () => {
+          setImageError(false);
+          setUseProxy(true);
+        };
+        proxyImg.onerror = () => {
+          setImageError(true);
+          setUseProxy(false);
+        };
+        proxyImg.src = proxiedImageUrl;
+      };
+
+      img.src = directImageUrl;
+    };
+
+    loadImage();
+  }, [directImageUrl, proxiedImageUrl]);
 
   const postsByHour = Array(24).fill(0);
   const engagementByHour = Array(24).fill(0);
@@ -84,12 +110,12 @@ const TopPostAndEngagement = ({ username, posts }) => {
           {imageError ? (
             <div className="w-full h-full flex items-center justify-center text-gray-500 font-medium text-center p-4">
               <p>
-                Unable to display the top post image due to CORS restrictions. Search the shortcode below for more details.
+                Unable to load the image. Please check the post directly using the link below.
               </p>
             </div>
           ) : (
             <img
-              src={proxiedImageUrl || "/api/placeholder/400/400"}
+              src={useProxy ? proxiedImageUrl : directImageUrl}
               alt="Top Post"
               className="w-full h-full"
               style={{ objectFit: 'contain', objectPosition: 'center' }}
@@ -115,7 +141,6 @@ const TopPostAndEngagement = ({ username, posts }) => {
             )}
             <div className="text-xs text-gray-500">{topPost.metadata.post_id}</div>
           </div>
-
 
           <div className="grid grid-cols-3 gap-3">
             <div className="text-center p-3 bg-gradient-to-br from-indigo-50 to-blue-50 rounded-lg">

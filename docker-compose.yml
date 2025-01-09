@@ -6,13 +6,23 @@ services:
     ports:
       - "8000:8000"
     env_file:
-      - .env  # Load environment variables from a file
+      - .env
+    networks:
+      - app-network
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
-      - "3000:3000"  # Adjust port based on frontend dev server
+      - "3000:3000"
     env_file:
-      - .env  # Load environment variables from a file
+      - .env
+    depends_on:
+      - backend  # Ensure the backend starts before the frontend
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

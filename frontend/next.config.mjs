@@ -20,6 +20,7 @@ const nextConfig = {
   // Expose environment variables to the client
   env: {
     PUBLIC_BACKEND_URL_DEV: process.env.PUBLIC_BACKEND_URL_DEV,
+    HOST: process.env.HOST || '0.0.0.0',
     PORT: (process.env.PORT || 3000).toString()
   },
   crossOrigin: 'anonymous',

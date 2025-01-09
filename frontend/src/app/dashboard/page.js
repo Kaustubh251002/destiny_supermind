@@ -3,7 +3,7 @@
 import { useUserContext } from "../../context/UserContext";
 import Navbar from "../../components/Dashboard/Navbar";
 import PerformanceOverview from "../../components/Dashboard/PerformanceOverview";
-import TopPostAndEngagement from "@/components/Dashboard/TopPostAndEngagement";
+import TopPostAndEngagement from "../../components/Dashboard/TopPostAndEngagement";
 
 const Dashboard = () => {
   // Access user context data
