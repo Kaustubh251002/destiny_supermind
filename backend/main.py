@@ -182,7 +182,7 @@ def format_data_as_csv(data: List[Dict[str, Any]]) -> str:
         logger.error(f"CSV formatting failed: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to format data")
 
-@app.get("/api/v1/health")
+@app.get("/api/v1/health", methods=["GET", "HEAD"])
 async def health_check():
     """Health check endpoint"""
     try:
