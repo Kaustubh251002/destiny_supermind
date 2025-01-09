@@ -16,6 +16,7 @@ The chatbot interacts with users by making API calls to **Langflow** and returni
 
 ### 🩺 Health Endpoint  
 The `/api/v1/health` endpoint checks the system's health, ensuring the application is up and running.  
+To check the endpoints health visit [Uptime Dashboard](https://stats.uptimerobot.com/2i70mA0tKh).
 
 ---
 
