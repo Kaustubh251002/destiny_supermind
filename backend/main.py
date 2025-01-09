@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Query, HTTPException
+from fastapi import FastAPI, Query, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Dict, Any
 import os
@@ -182,9 +182,11 @@ def format_data_as_csv(data: List[Dict[str, Any]]) -> str:
         logger.error(f"CSV formatting failed: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to format data")
 
-@app.get("/api/v1/health", methods=["GET", "HEAD"])
-async def health_check():
+@app.api_route("/api/v1/health", methods=["GET", "HEAD"])
+async def health_check(request: Request):
     """Health check endpoint"""
+    if request.method == "HEAD":
+        logger.info("Received a HEAD request for /api/v1/health")
     try:
         await get_collection(COLLECTION_NAME)
         return {"status": "healthy", "timestamp": datetime.now().isoformat()}
