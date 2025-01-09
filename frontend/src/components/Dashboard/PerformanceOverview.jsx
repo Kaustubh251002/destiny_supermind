@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Button } from "../ui/button";
 import { Calendar } from "../ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
-import { format, parseISO, startOfWeek, startOfMonth, isWithinInterval } from 'date-fns';
+import { format, parseISO, startOfWeek, startOfMonth, isWithinInterval, subMonths } from 'date-fns';
 
 const DatePickerWithRange = ({ dateRange, onDateRangeChange }) => {
   if (!dateRange?.from || !dateRange?.to) return null;
@@ -56,7 +56,24 @@ const CustomXAxisTick = ({ x, y, payload }) => {
         textAnchor="end" 
         fill="#666"
         transform="rotate(-35)"
-        style={{ fontSize: '12px' }}
+        style={{ fontSize: '10px' }}
+      >
+        {payload.value}
+      </text>
+    </g>
+  );
+};
+
+const CustomYAxisTick = ({ x, y, payload }) => {
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text
+        x={0}
+        y={0}
+        dy={4}
+        textAnchor="end"
+        fill="#666"
+        style={{ fontSize: '10px' }}
       >
         {payload.value}
       </text>
@@ -74,24 +91,35 @@ const PerformanceOverview = ({ data }) => {
     );
   }
 
-  // Initialize with full date range
+  // Initialize with full date range or default to last 6 months
   const initialDateRange = useMemo(() => {
     try {
       const sortedDates = [...data]
-        .filter(item => item?.metadata?.timestamp) // Ensure timestamp exists
+        .filter(item => item?.metadata?.timestamp)
         .sort((a, b) => new Date(a.metadata.timestamp) - new Date(b.metadata.timestamp));
 
       if (sortedDates.length === 0) {
-        return null;
+        const today = new Date();
+        return {
+          from: subMonths(today, 6),
+          to: today
+        };
       }
 
+      const firstDate = parseISO(sortedDates[0].metadata.timestamp);
+      const lastDate = parseISO(sortedDates[sortedDates.length - 1].metadata.timestamp);
+
       return {
-        from: parseISO(sortedDates[0].metadata.timestamp),
-        to: parseISO(sortedDates[sortedDates.length - 1].metadata.timestamp)
+        from: firstDate,
+        to: lastDate
       };
     } catch (error) {
       console.error('Error initializing date range:', error);
-      return null;
+      const today = new Date();
+      return {
+        from: subMonths(today, 6),
+        to: today
+      };
     }
   }, [data]);
 
@@ -225,12 +253,16 @@ const PerformanceOverview = ({ data }) => {
   };
 
   const COLORS = ['#4f46e5', '#7c3aed', '#2563eb', '#9333ea', '#06b6d4'];
+  const chartConfig = {
+    fontSize: 10,
+    margin: { top: 5, right: 20, left: 10, bottom: 45 }
+  };
 
   const renderLineChart = () => (
     <ResponsiveContainer width="100%" height={300}>
       <LineChart 
         data={processedData.timeMetrics}
-        margin={{ top: 5, right: 30, left: 20, bottom: 40 }}
+        margin={chartConfig.margin}
       >
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis 
@@ -238,8 +270,13 @@ const PerformanceOverview = ({ data }) => {
           height={60}
           tick={<CustomXAxisTick />}
           interval={calculateXAxisInterval()}
+          fontSize={chartConfig.fontSize}
         />
-        <YAxis />
+        <YAxis 
+          tick={<CustomYAxisTick />}
+          fontSize={chartConfig.fontSize}
+          width={35}
+        />
         <Tooltip 
           formatter={(value, name) => [`${value}`, name]}
           labelFormatter={(label) => `Date: ${label}`}
@@ -268,10 +305,21 @@ const PerformanceOverview = ({ data }) => {
 
   const renderContentPerformance = () => (
     <ResponsiveContainer width="100%" height={300}>
-      <BarChart data={processedData.contentTypes}>
+      <BarChart 
+        data={processedData.contentTypes}
+        margin={chartConfig.margin}
+      >
         <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="type" />
-        <YAxis />
+        <XAxis 
+          dataKey="type" 
+          tick={<CustomXAxisTick />}
+          fontSize={chartConfig.fontSize}
+        />
+        <YAxis 
+          tick={<CustomYAxisTick />}
+          fontSize={chartConfig.fontSize}
+          width={35}
+        />
         <Tooltip 
           formatter={(value, name) => [
             `${value}${name === 'Posts per Period' ? ' posts' : ''}`, 
@@ -320,10 +368,21 @@ const PerformanceOverview = ({ data }) => {
 
   const renderPostsDistribution = () => (
     <ResponsiveContainer width="100%" height={300}>
-      <BarChart data={processedData.contentTypes}>
+      <BarChart 
+        data={processedData.contentTypes}
+        margin={chartConfig.margin}
+      >
         <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="type" />
-        <YAxis />
+        <XAxis 
+          dataKey="type" 
+          tick={<CustomXAxisTick />}
+          fontSize={chartConfig.fontSize}
+        />
+        <YAxis 
+          tick={<CustomYAxisTick />}
+          fontSize={chartConfig.fontSize}
+          width={35}
+        />
         <Tooltip 
           formatter={(value, name) => [`${value} posts`, name]}
         />
@@ -347,7 +406,6 @@ const PerformanceOverview = ({ data }) => {
           <DatePickerWithRange 
             dateRange={dateRange}
             onDateRangeChange={(newRange) => {
-              // Only update if we have both from and to dates
               if (newRange?.from && newRange?.to) {
                 setDateRange(newRange);
               }
@@ -432,4 +490,4 @@ const PerformanceOverview = ({ data }) => {
   );
 };
 
-export default PerformanceOverview
+export default PerformanceOverview;
