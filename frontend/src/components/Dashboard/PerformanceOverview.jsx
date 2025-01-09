@@ -1,532 +1,435 @@
-import React, { useState, useMemo, useCallback, Suspense } from 'react';
-import { format, parseISO, getWeek, isWithinInterval, startOfWeek, endOfWeek, isBefore, isAfter } from 'date-fns';
-import { Line, Bar, Pie, Doughnut } from 'react-chartjs-2';
-import {
-  Chart as ChartJS,
-  LineElement,
-  PointElement,
-  LinearScale,
-  CategoryScale,
-  BarElement,
-  ArcElement,
-  Legend,
-  Tooltip,
-  DoughnutController,
-} from 'chart.js';
+import React, { useState, useMemo } from "react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell, LineChart, Line, PieChart, Pie } from 'recharts';
+import { TrendingUp, Activity, Heart, MessageCircle, CalendarIcon } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { Button } from "../ui/button";
+import { Calendar } from "../ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import { format, parseISO, startOfWeek, startOfMonth, isWithinInterval } from 'date-fns';
 
-// Add the missing components
-const LoadingSpinner = () => (
-  <div className="min-h-[500px] flex items-center justify-center">
-    <div className="w-12 h-12 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
-  </div>
-);
+const DatePickerWithRange = ({ dateRange, onDateRangeChange }) => {
+  if (!dateRange?.from || !dateRange?.to) return null;
 
-const ChartNavButton = ({ direction, onClick }) => (
-  <button
-    onClick={onClick}
-    className="
-      p-3 rounded-full
-      bg-gradient-to-r from-purple-600/90 to-indigo-600/90
-      text-white shadow-lg
-      transform transition-all duration-300
-      hover:scale-105 hover:shadow-xl
-      active:scale-95
-      disabled:opacity-50 disabled:cursor-not-allowed
-      backdrop-blur-sm
-      pointer-events-auto
-    "
-    aria-label={`${direction} chart`}
-  >
-    {direction === 'prev' ? '←' : '→'}
-  </button>
-);
-// Register ChartJS components as before
-ChartJS.register(
-  LineElement,
-  PointElement,
-  LinearScale,
-  CategoryScale,
-  BarElement,
-  ArcElement,
-  Legend,
-  Tooltip,
-  DoughnutController,
-);
-
-const DateRangeSelector = ({ startDate, endDate, onStartDateChange, onEndDateChange, minDate, maxDate }) => (
-  <div className="flex flex-wrap gap-2 items-center">
-    <input
-      type="date"
-      value={startDate}
-      onChange={(e) => onStartDateChange(e.target.value)}
-      min={minDate}
-      max={endDate}
-      className="rounded-lg bg-white/80 border border-purple-200 px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-    />
-    <span className="text-gray-500">to</span>
-    <input
-      type="date"
-      value={endDate}
-      onChange={(e) => onEndDateChange(e.target.value)}
-      min={startDate}
-      max={maxDate}
-      className="rounded-lg bg-white/80 border border-purple-200 px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-    />
-  </div>
-);
-
-const TimeframeSelect = ({ value, onChange }) => (
-  <select
-    value={value}
-    onChange={onChange}
-    className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600/90 to-indigo-600/90 text-white shadow-md"
-  >
-    <option value="day">Daily</option>
-    <option value="week">Weekly</option>
-    <option value="month">Monthly</option>
-  </select>
-);
-const baseChartOptions = {
-  responsive: true,
-  maintainAspectRatio: true,
-  animation: {
-    duration: 300,
-  },
-  plugins: {
-    legend: {
-      labels: {
-        usePointStyle: true,
-      },
-    },
-    tooltip: {
-      enabled: true,
-      mode: 'index',
-      intersect: false,
-      animation: {
-        duration: 100,
-      },
-    },
-  },
+  return (
+    <div className="grid gap-2">
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            className="w-[300px] justify-start text-left font-normal"
+          >
+            <CalendarIcon className="mr-2 h-4 w-4" />
+            {dateRange.from && dateRange.to ? (
+              <>
+                {format(dateRange.from, "LLL dd, y")} -{" "}
+                {format(dateRange.to, "LLL dd, y")}
+              </>
+            ) : (
+              <span>Pick a date range</span>
+            )}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            initialFocus
+            mode="range"
+            defaultMonth={dateRange.from}
+            selected={dateRange}
+            onSelect={onDateRangeChange}
+            numberOfMonths={2}
+          />
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
 };
 
-const lineChartOptions = {
-  ...baseChartOptions,
-  elements: {
-    line: {
-      tension: 0.2,
-    },
-    point: {
-      radius: 0,
-      hoverRadius: 4,
-    },
-  },
-  scales: {
-    x: {
-      ticks: {
-        maxTicksLimit: 10,
-        maxRotation: 0,
-        autoSkip: true,
-      },
-    },
-    y: {
-      beginAtZero: true,
-      ticks: {
-        maxTicksLimit: 8,
-      },
-    },
-  },
-};
-
-const barChartOptions = {
-  ...baseChartOptions,
-  scales: {
-    x: {
-      stacked: true,
-      ticks: {
-        maxTicksLimit: 10,
-      },
-    },
-    y: {
-      stacked: true,
-      beginAtZero: true,
-    },
-  },
-};
-
-const pieChartOptions = {
-  ...baseChartOptions,
-  animation: {
-    duration: 500,
-  },
-};
-
-const doughnutChartOptions = {
-  ...baseChartOptions,
-  cutout: '70%',
-  radius: '90%',
+const CustomXAxisTick = ({ x, y, payload }) => {
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text 
+        x={0} 
+        y={0} 
+        dy={16} 
+        textAnchor="end" 
+        fill="#666"
+        transform="rotate(-35)"
+        style={{ fontSize: '12px' }}
+      >
+        {payload.value}
+      </text>
+    </g>
+  );
 };
 
 const PerformanceOverview = ({ data }) => {
-  const [currentChart, setCurrentChart] = useState(0);
-  const [timeframe, setTimeframe] = useState('week');
+  // Ensure data is valid and not empty
+  if (!Array.isArray(data) || data.length === 0) {
+    return (
+      <div className="w-full h-64 flex items-center justify-center">
+        <p className="text-lg text-gray-500">No data available</p>
+      </div>
+    );
+  }
 
-  // Get min and max dates from data
-  const dateRange = useMemo(() => {
-    const dates = data.map(item => parseISO(item.metadata.timestamp));
-    return {
-      min: format(Math.min(...dates), 'yyyy-MM-dd'),
-      max: format(Math.max(...dates), 'yyyy-MM-dd')
-    };
+  // Initialize with full date range
+  const initialDateRange = useMemo(() => {
+    try {
+      const sortedDates = [...data]
+        .filter(item => item?.metadata?.timestamp) // Ensure timestamp exists
+        .sort((a, b) => new Date(a.metadata.timestamp) - new Date(b.metadata.timestamp));
+
+      if (sortedDates.length === 0) {
+        return null;
+      }
+
+      return {
+        from: parseISO(sortedDates[0].metadata.timestamp),
+        to: parseISO(sortedDates[sortedDates.length - 1].metadata.timestamp)
+      };
+    } catch (error) {
+      console.error('Error initializing date range:', error);
+      return null;
+    }
   }, [data]);
 
-  // Initialize date filters with full range
-  const [dateFilter, setDateFilter] = useState({
-    start: dateRange.min,
-    end: dateRange.max
-  });
+  const [timeframe, setTimeframe] = useState('week');
+  const [activeTab, setActiveTab] = useState('overview');
+  const [dateRange, setDateRange] = useState(initialDateRange);
+
+  // If date range is not properly initialized, show error state
+  if (!dateRange?.from || !dateRange?.to) {
+    return (
+      <div className="w-full h-64 flex items-center justify-center">
+        <p className="text-lg text-gray-500">Invalid date range in data</p>
+      </div>
+    );
+  }
 
   const processedData = useMemo(() => {
     // Filter data based on date range
     const filteredData = data.filter(post => {
       const postDate = parseISO(post.metadata.timestamp);
-      return isAfter(postDate, parseISO(dateFilter.start)) &&
-        isBefore(postDate, parseISO(dateFilter.end));
+      return isWithinInterval(postDate, { start: dateRange.from, end: dateRange.to });
     });
 
-    const validData = filteredData.filter(post => {
-      const { likes, comments, views } = post.metadata;
-      return likes != null && comments != null && views != null;
-    });
-
-    // Process time-based metrics with date formatting based on timeframe
-    const timeBasedMetrics = validData.reduce((acc, post) => {
+    // Group data based on timeframe
+    const groupedTimeData = filteredData.reduce((acc, post) => {
       const date = parseISO(post.metadata.timestamp);
       let key;
+      let displayDate;
 
-      switch (timeframe) {
-        case 'day':
-          key = format(date, 'yyyy-MM-dd');
-          break;
-        case 'week':
-          const weekStart = startOfWeek(date);
-          key = format(weekStart, 'MMM d') + '-' + format(endOfWeek(date), 'd');
-          break;
-        case 'month':
-          key = format(date, 'MMM yyyy');
-          break;
-        default:
-          key = format(date, 'yyyy-MM-dd');
+      if (timeframe === 'day') {
+        key = format(date, 'yyyy-MM-dd');
+        displayDate = format(date, 'MMM dd');
+      } else if (timeframe === 'week') {
+        const weekStart = startOfWeek(date);
+        key = format(weekStart, 'yyyy-MM-dd');
+        displayDate = `Week of ${format(weekStart, 'MMM dd')}`;
+      } else if (timeframe === 'month') {
+        const monthStart = startOfMonth(date);
+        key = format(monthStart, 'yyyy-MM');
+        displayDate = format(monthStart, 'MMM yyyy');
       }
 
       if (!acc[key]) {
         acc[key] = {
+          date: displayDate,
           likes: 0,
           comments: 0,
-          views: 0,
-          count: 0,
-          postTypes: {},
+          posts: 0,
           engagement: 0,
-          postsByTime: { morning: 0, afternoon: 0, evening: 0, night: 0 },
-          timestamp: date // Store original date for sorting
+          timestamp: date,
+          contentTypes: {}
         };
       }
 
-      // Track post types and calculate engagement rate
-      const postType = post.metadata.type || 'Unknown';
-      acc[key].postTypes[postType] = (acc[key].postTypes[postType] || 0) + 1;
+      const type = post.metadata.type || 'Other';
+      if (!acc[key].contentTypes[type]) {
+        acc[key].contentTypes[type] = {
+          posts: 0,
+          likes: 0,
+          comments: 0,
+          engagement: 0
+        };
+      }
 
-      acc[key].likes += post.metadata.likes;
-      acc[key].comments += post.metadata.comments;
-      acc[key].views += post.metadata.views;
-      acc[key].engagement += post.metadata.likes + post.metadata.comments;
-      acc[key].count++;
+      acc[key].likes += post.metadata.likes || 0;
+      acc[key].comments += post.metadata.comments || 0;
+      acc[key].engagement += (post.metadata.likes || 0) + (post.metadata.comments || 0);
+      acc[key].posts++;
 
-      // Track posting time distribution
-      const hour = parseISO(post.metadata.timestamp).getHours();
-      if (hour >= 5 && hour < 12) acc[key].postsByTime.morning++;
-      else if (hour >= 12 && hour < 17) acc[key].postsByTime.afternoon++;
-      else if (hour >= 17 && hour < 22) acc[key].postsByTime.evening++;
-      else acc[key].postsByTime.night++;
+      acc[key].contentTypes[type].posts++;
+      acc[key].contentTypes[type].likes += post.metadata.likes || 0;
+      acc[key].contentTypes[type].comments += post.metadata.comments || 0;
+      acc[key].contentTypes[type].engagement += (post.metadata.likes || 0) + (post.metadata.comments || 0);
 
       return acc;
     }, {});
 
+    // Convert grouped time data to array and calculate averages
+    const timeMetrics = Object.values(groupedTimeData)
+      .sort((a, b) => a.timestamp - b.timestamp)
+      .map(metric => ({
+        ...metric,
+        likes: metric.posts ? Math.round(metric.likes / metric.posts) : 0,
+        comments: metric.posts ? Math.round(metric.comments / metric.posts) : 0,
+        engagement: metric.posts ? Math.round(metric.engagement / metric.posts) : 0
+      }));
 
-    // Process hashtag and content type metrics
-    const contentTypeMetrics = {};
-    const hashtagStats = validData.reduce((acc, post) => {
-      const hashtags = post.metadata.hashtags || [];
-      const engagement = post.metadata.likes + post.metadata.comments;
-      const postType = post.metadata.type || 'Unknown';
-
-      // Update content type metrics
-      if (!contentTypeMetrics[postType]) {
-        contentTypeMetrics[postType] = {
-          totalPosts: 0,
-          totalEngagement: 0,
-        };
-      }
-      contentTypeMetrics[postType].totalPosts++;
-      contentTypeMetrics[postType].totalEngagement += engagement;
-
-      hashtags.forEach(tag => {
-        if (!acc[tag]) {
-          acc[tag] = {
-            count: 0,
-            totalEngagement: 0,
+    // Calculate aggregated content type metrics for the selected timeframe
+    const contentMetrics = Object.values(groupedTimeData).reduce((acc, period) => {
+      Object.entries(period.contentTypes).forEach(([type, metrics]) => {
+        if (!acc[type]) {
+          acc[type] = {
+            type,
+            posts: 0,
+            totalLikes: 0,
+            totalComments: 0,
+            engagement: 0,
+            periods: 0
           };
         }
-        acc[tag].count++;
-        acc[tag].totalEngagement += engagement;
+        acc[type].posts += metrics.posts;
+        acc[type].totalLikes += metrics.likes;
+        acc[type].totalComments += metrics.comments;
+        acc[type].engagement += metrics.engagement;
+        acc[type].periods++;
       });
-
       return acc;
     }, {});
 
-    // Calculate engagement rates by content type
-    Object.keys(contentTypeMetrics).forEach(type => {
-      contentTypeMetrics[type].engagementRate =
-        (contentTypeMetrics[type].totalEngagement / contentTypeMetrics[type].totalPosts).toFixed(2);
-    });
-
-    const topHashtags = Object.entries(hashtagStats)
-      .sort(([, a], [, b]) => b.totalEngagement - a.totalEngagement)
-      .slice(0, 5);
-
-    const sortedKeys = Object.keys(timeBasedMetrics).sort((a, b) =>
-      timeBasedMetrics[a].timestamp - timeBasedMetrics[b].timestamp
-    );
-
-    // Format labels based on timeframe
-    const labels = sortedKeys.map(key => {
-      switch (timeframe) {
-        case 'day':
-          return format(timeBasedMetrics[key].timestamp, 'MM/dd/yyyy');
-        case 'week':
-          return key; // Already formatted as "Jan 1-7"
-        case 'month':
-          return key; // Already formatted as "Jan 2024"
-        default:
-          return key;
-      }
-    });
-
-    const allPostTypes = new Set();
-    Object.values(timeBasedMetrics).forEach(dayData => {
-      Object.keys(dayData.postTypes).forEach(type => allPostTypes.add(type));
-    });
-
-    const postTypeData = Array.from(allPostTypes).map(type => ({
-      type,
-      data: sortedKeys.map(key => timeBasedMetrics[key].postTypes[type] || 0)
-    }));
+    const contentTypes = Object.values(contentMetrics)
+      .map(item => ({
+        ...item,
+        averageLikes: Math.round(item.totalLikes / item.posts),
+        averageComments: Math.round(item.totalComments / item.posts),
+        engagementRate: Math.round((item.engagement / (item.posts * item.periods)) * 100) / 100,
+        postsPerPeriod: Math.round((item.posts / item.periods) * 100) / 100
+      }));
 
     return {
-      labels,
-      likes: sortedKeys.map(key => Math.round(timeBasedMetrics[key].likes / timeBasedMetrics[key].count)),
-      comments: sortedKeys.map(key => Math.round(timeBasedMetrics[key].comments / timeBasedMetrics[key].count)),
-      views: sortedKeys.map(key => Math.round(timeBasedMetrics[key].views / timeBasedMetrics[key].count)),
-      postTypes: postTypeData,
-      hashtagStats: topHashtags,
-      contentTypeMetrics,
-      timeBasedMetrics: sortedKeys.map(key => timeBasedMetrics[key].postsByTime),
+      timeMetrics,
+      contentTypes
     };
-  }, [data, timeframe]);
+  }, [data, timeframe, dateRange]);
 
-  const chartData = useMemo(() => ({
-    line: {
-      labels: processedData.labels,
-      datasets: [
-        {
-          label: 'Likes',
-          data: processedData.likes,
-          borderColor: 'rgb(37, 99, 235)',
-          fill: false,
-        },
-        {
-          label: 'Comments',
-          data: processedData.comments,
-          borderColor: 'rgb(255, 159, 64)',
-          fill: false,
-        },
-        {
-          label: 'Views',
-          data: processedData.views,
-          borderColor: 'rgb(147, 51, 234)',
-          fill: false,
-        },
-      ],
-    },
-    bar: {
-      labels: processedData.labels,
-      datasets: processedData.postTypes.map((typeData, index) => ({
-        label: typeData.type,
-        data: typeData.data,
-        backgroundColor: [
-          'rgba(37, 99, 235, 0.8)',
-          'rgba(255, 159, 64, 0.8)',
-          'rgba(147, 51, 234, 0.8)',
-          'rgba(52, 211, 153, 0.8)',
-          'rgba(251, 146, 60, 0.8)',
-        ][index % 5],
-      })),
-    },
-    pie: {
-      labels: processedData.hashtagStats.map(([tag]) => tag),
-      datasets: [{
-        data: processedData.hashtagStats.map(([, stats]) => stats.totalEngagement),
-        backgroundColor: [
-          'rgba(37, 99, 235, 0.8)',
-          'rgba(255, 159, 64, 0.8)',
-          'rgba(147, 51, 234, 0.8)',
-          'rgba(52, 211, 153, 0.8)',
-          'rgba(251, 146, 60, 0.8)',
-        ],
-      }],
-    },
-    doughnut: {
-      labels: Object.keys(processedData.contentTypeMetrics),
-      datasets: [{
-        data: Object.values(processedData.contentTypeMetrics).map(metrics =>
-          parseFloat(metrics.engagementRate)
-        ),
-        backgroundColor: [
-          'rgba(37, 99, 235, 0.8)',
-          'rgba(255, 159, 64, 0.8)',
-          'rgba(147, 51, 234, 0.8)',
-          'rgba(52, 211, 153, 0.8)',
-          'rgba(251, 146, 60, 0.8)',
-        ],
-      }],
-    },
-  }), [processedData]);
-
-  const handleNextChart = useCallback(() => {
-    setCurrentChart((prev) => (prev + 1) % 4); // Updated for 4 charts
-  }, []);
-
-  const handlePrevChart = useCallback(() => {
-    setCurrentChart((prev) => (prev - 1 + 4) % 4); // Updated for 4 charts
-  }, []);
-
-  const handleTimeframeChange = useCallback((e) => {
-    setTimeframe(e.target.value);
-  }, []);
-
-  const chartTitles = [
-    "Engagement Metrics Over Time",
-    "Content Type Distribution",
-    "Top Hashtags by Engagement",
-    "Engagement Rate by Content Type"
-  ];
-
-  const renderChart = useCallback(() => {
-    switch (currentChart) {
-      case 0:
-        return <Line data={chartData.line} options={lineChartOptions} />;
-      case 1:
-        return <Bar data={chartData.bar} options={barChartOptions} />;
-      case 2:
-        return <Pie data={chartData.pie} options={pieChartOptions} />;
-      case 3:
-        return <Doughnut data={chartData.doughnut} options={doughnutChartOptions} />;
-      default:
-        return null;
-    }
-  }, [currentChart, chartData]);
-
-  const getChartOptions = useCallback(() => {
-    const baseOptions = {
-      responsive: true,
-      maintainAspectRatio: true,
-      animation: {
-        duration: 300,
-      },
-      plugins: {
-        legend: {
-          labels: {
-            usePointStyle: true,
-          },
-        },
-        tooltip: {
-          enabled: true,
-          mode: 'index',
-          intersect: false,
-          animation: {
-            duration: 100,
-          },
-        },
-      },
-    };
-
-    const xAxisOptions = {
-      ticks: {
-        maxRotation: timeframe === 'day' ? 90 : 0, // Vertical labels for daily view
-        minRotation: timeframe === 'day' ? 90 : 0,
-        font: {
-          size: timeframe === 'day' ? 10 : 12 // Smaller font for daily view
-        },
-        autoSkip: true,
-        maxTicksLimit: timeframe === 'day' ? 20 : 10
-      }
-    };
-
-    return {
-      ...baseOptions,
-      scales: {
-        x: xAxisOptions,
-        y: {
-          beginAtZero: true,
-          ticks: {
-            maxTicksLimit: 8
-          }
-        }
-      }
-    };
-  }, [timeframe]);
-
-  return (
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-b from-white via-purple-50 to-purple-100 shadow-xl w-full">
-        <div className="absolute inset-0 bg-white/40 backdrop-blur-sm"></div>
-        
-        <div className="relative p-6 space-y-6 w-full">
-          {/* Header with controls */}
-          <div className="flex flex-col lg:flex-row justify-between items-center lg:items-center gap-4">
-            <h2 className="text-xl font-bold text-black">
-              {chartTitles[currentChart]}
-            </h2>
-            
-            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-              <TimeframeSelect value={timeframe} onChange={(e) => setTimeframe(e.target.value)} />
-              
-              <DateRangeSelector
-                startDate={dateFilter.start}
-                endDate={dateFilter.end}
-                onStartDateChange={(date) => setDateFilter(prev => ({ ...prev, start: date }))}
-                onEndDateChange={(date) => setDateFilter(prev => ({ ...prev, end: date }))}
-                minDate={dateRange.min}
-                maxDate={dateRange.max}
-              />
-            </div>
-          </div>
-  
-          {/* Chart Container */}
-          <div className="relative bg-white/50 rounded-xl p-4 shadow-inner w-full">
-            <Suspense fallback={<LoadingSpinner />}>
-              <div className="w-full h-[375px] flex items-center justify-center transition-all duration-300">
-                {renderChart()}
-              </div>
-            </Suspense>
-  
-            {/* Navigation Buttons */}
-            <div className="absolute top-1/2 -translate-y-1/2 left-0 right-0 flex justify-between px-4 pointer-events-none w-full">
-              <ChartNavButton direction="prev" onClick={handlePrevChart} />
-              <ChartNavButton direction="next" onClick={handleNextChart} />
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+  const calculateXAxisInterval = () => {
+    const dataLength = processedData.timeMetrics.length;
+    if (dataLength <= 10) return 0;
+    if (dataLength <= 20) return 1;
+    if (dataLength <= 30) return 2;
+    return Math.floor(dataLength / 10);
   };
 
-export default PerformanceOverview;
+  const COLORS = ['#4f46e5', '#7c3aed', '#2563eb', '#9333ea', '#06b6d4'];
+
+  const renderLineChart = () => (
+    <ResponsiveContainer width="100%" height={300}>
+      <LineChart 
+        data={processedData.timeMetrics}
+        margin={{ top: 5, right: 30, left: 20, bottom: 40 }}
+      >
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis 
+          dataKey="date" 
+          height={60}
+          tick={<CustomXAxisTick />}
+          interval={calculateXAxisInterval()}
+        />
+        <YAxis />
+        <Tooltip 
+          formatter={(value, name) => [`${value}`, name]}
+          labelFormatter={(label) => `Date: ${label}`}
+        />
+        <Line 
+          type="monotone" 
+          dataKey="likes" 
+          stroke="#4f46e5" 
+          name="Avg Likes"
+          strokeWidth={2}
+          dot={false}
+          activeDot={{ r: 6 }}
+        />
+        <Line 
+          type="monotone" 
+          dataKey="comments" 
+          stroke="#7c3aed" 
+          name="Avg Comments"
+          strokeWidth={2}
+          dot={false}
+          activeDot={{ r: 6 }}
+        />
+      </LineChart>
+    </ResponsiveContainer>
+  );
+
+  const renderContentPerformance = () => (
+    <ResponsiveContainer width="100%" height={300}>
+      <BarChart data={processedData.contentTypes}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="type" />
+        <YAxis />
+        <Tooltip 
+          formatter={(value, name) => [
+            `${value}${name === 'Posts per Period' ? ' posts' : ''}`, 
+            name
+          ]}
+        />
+        <Bar 
+          dataKey="engagementRate" 
+          name={`Avg. Engagement per ${timeframe.charAt(0).toUpperCase() + timeframe.slice(1)}`}
+        >
+          {processedData.contentTypes.map((entry, index) => (
+            <Cell key={index} fill={COLORS[index % COLORS.length]} />
+          ))}
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  );
+
+  const renderEngagementPieChart = () => (
+    <ResponsiveContainer width="100%" height={300}>
+      <PieChart>
+        <Pie
+          data={processedData.contentTypes}
+          dataKey="engagement"
+          nameKey="type"
+          cx="50%"
+          cy="50%"
+          outerRadius={100}
+          label={({ type, engagement }) => 
+            `${type}: ${Math.round(engagement / processedData.timeMetrics.length)}`
+          }
+        >
+          {processedData.contentTypes.map((entry, index) => (
+            <Cell key={index} fill={COLORS[index % COLORS.length]} />
+          ))}
+        </Pie>
+        <Tooltip 
+          formatter={(value, name, props) => [
+            Math.round(value / processedData.timeMetrics.length),
+            `${props.payload.type} Engagement/${timeframe}`
+          ]}
+        />
+      </PieChart>
+    </ResponsiveContainer>
+  );
+
+  const renderPostsDistribution = () => (
+    <ResponsiveContainer width="100%" height={300}>
+      <BarChart data={processedData.contentTypes}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="type" />
+        <YAxis />
+        <Tooltip 
+          formatter={(value, name) => [`${value} posts`, name]}
+        />
+        <Bar 
+          dataKey="postsPerPeriod" 
+          name={`Posts per ${timeframe}`}
+        >
+          {processedData.contentTypes.map((entry, index) => (
+            <Cell key={index} fill={COLORS[index % COLORS.length]} />
+          ))}
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  );
+
+  return (
+    <div className="w-full space-y-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <h1 className="text-2xl font-bold"></h1>
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center w-full md:w-auto">
+          <DatePickerWithRange 
+            dateRange={dateRange}
+            onDateRangeChange={(newRange) => {
+              // Only update if we have both from and to dates
+              if (newRange?.from && newRange?.to) {
+                setDateRange(newRange);
+              }
+            }}
+          />
+          <Select value={timeframe} onValueChange={setTimeframe}>
+            <SelectTrigger className="w-32">
+              <SelectValue placeholder="Select timeframe" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="day">Daily</SelectItem>
+              <SelectItem value="week">Weekly</SelectItem>
+              <SelectItem value="month">Monthly</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="content">Content Analysis</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5" />
+                  Engagement Over Time
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {renderLineChart()}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="h-5 w-5" />
+                  Content Performance
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {renderContentPerformance()}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="content" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Heart className="h-5 w-5" />
+                  Average Engagement by Type
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {renderEngagementPieChart()}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageCircle className="h-5 w-5" />
+                  Posts Distribution
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {renderPostsDistribution()}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+};
+
+export default PerformanceOverview

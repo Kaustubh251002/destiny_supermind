@@ -1,9 +1,9 @@
 # Use a more specific node version
-FROM node:latest
+FROM node:23.5.0
 
-# Install dependencies
+# Install dependencies with legacy peer deps
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm ci --only=production --legacy-peer-deps
 
 # Copy only necessary files
 COPY . . 
@@ -12,7 +12,7 @@ COPY . .
 RUN npm run build
 
 # Remove development dependencies
-RUN npm prune --production
+RUN npm prune --production 
 
 # Set environment variables
 ENV NEXT_TELEMETRY_DISABLED 1
