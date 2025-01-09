@@ -3,7 +3,7 @@ FROM node:23.5.0
 
 # Install dependencies with legacy peer deps
 COPY package*.json ./
-RUN npm ci --only=production --legacy-peer-deps
+RUN npm install --legacy-peer-deps
 
 # Copy only necessary files
 COPY . . 
@@ -12,7 +12,7 @@ COPY . .
 RUN npm run build
 
 # Remove development dependencies
-RUN npm prune --production 
+RUN npm prune --production --legacy-peer-deps
 
 # Set environment variables
 ENV NEXT_TELEMETRY_DISABLED 1
