@@ -30,8 +30,6 @@ export const fetchData = async (username, count) => {
     return data;
   } catch (error) {
     // Log the detailed error message
-    console.error("Error in fetchData:", error.message);
-    console.error("Stack trace:", error.stack);
     throw error; // Rethrow the error to propagate it to the caller
   }
 };
