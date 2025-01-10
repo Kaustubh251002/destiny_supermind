@@ -108,6 +108,21 @@ const Dashboard = () => {
     }
   }, [currentUser, metadata]);
 
+  const AccountList = ({ accounts }) => (
+    <div className="flex flex-col items-start">
+      {accounts.map((account) => (
+        <button 
+          key={account} 
+          onClick={() => handleAccountClick(account)}
+          className="text-sm text-blue-600 hover:text-blue-700 hover:underline cursor-pointer whitespace-nowrap flex items-center mb-2"
+        >
+          <span className="inline-block w-2 h-2 bg-blue-600 rounded-full mr-2"></span>
+          {account}
+        </button>
+      ))}
+    </div>
+  );
+
   if (isLoading) {
     return <LoadingState username={currentUser || 'user'} />;
   }
@@ -144,36 +159,17 @@ const Dashboard = () => {
                 <p className="text-sm text-blue-700 mb-3">
                   Try these popular accounts:
                 </p>
-                <div className="flex justify-center mb-2">
-                  <div className="grid grid-cols-2 gap-12">
-                    <div className="flex flex-col items-start">
-                      {leftColumnAccounts.map((account) => (
-                        <button 
-                          key={account} 
-                          onClick={() => handleAccountClick(account)}
-                          className="text-sm text-blue-600 hover:text-blue-700 hover:underline cursor-pointer whitespace-nowrap flex items-center"
-                        >
-                          <span className="inline-block w-2 h-2 bg-blue-600 rounded-full mr-2"></span>
-                          {account}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="flex flex-col items-start">
-                      {rightColumnAccounts.map((account) => (
-                        <button 
-                          key={account} 
-                          onClick={() => handleAccountClick(account)}
-                          className="text-sm text-blue-600 hover:text-blue-700 hover:underline cursor-pointer whitespace-nowrap flex items-center"
-                        >
-                          <span className="inline-block w-2 h-2 bg-blue-600 rounded-full mr-2"></span>
-                          {account}
-                        </button>
-                      ))}
-                    </div>
+                <div className="flex justify-center">
+                  <div className="hidden md:flex space-x-16">
+                    <AccountList accounts={leftColumnAccounts} />
+                    <AccountList accounts={rightColumnAccounts} />
+                  </div>
+                  <div className="md:hidden flex justify-center">
+                    <AccountList accounts={leftColumnAccounts} />
                   </div>
                 </div>
-                <p className="text-xs text-blue-500">
-                  ...and 42 more top influencers!
+                <p className="text-xs text-blue-500 mt-2">
+                  ...and {42 + rightColumnAccounts.length} more top influencers!
                 </p>
               </div>
               <div className="mt-4 bg-green-50 p-4 rounded-lg">
