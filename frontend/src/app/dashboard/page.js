@@ -84,6 +84,12 @@ const Dashboard = () => {
     'virat.kohli'
   ];
 
+  // Total number of influencers is 50
+  const totalInfluencers = 50;
+  const shownInfluencers = leftColumnAccounts.length + rightColumnAccounts.length;
+  const mobileRemainingCount = totalInfluencers - leftColumnAccounts.length;
+  const desktopRemainingCount = totalInfluencers - shownInfluencers;
+
   const handleAccountClick = async (username) => {
     try {
       setIsLoading(true);
@@ -169,7 +175,8 @@ const Dashboard = () => {
                   </div>
                 </div>
                 <p className="text-xs text-blue-500 mt-2">
-                  ...and {42 + rightColumnAccounts.length} more top influencers!
+                  <span className="hidden md:inline">...and {desktopRemainingCount} more top influencers!</span>
+                  <span className="md:hidden">...and {mobileRemainingCount} more top influencers!</span>
                 </p>
               </div>
               <div className="mt-4 bg-green-50 p-4 rounded-lg">
