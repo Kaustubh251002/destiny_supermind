@@ -122,7 +122,7 @@ const AIChat = ({ username }) => {
     <div className="rounded-xl p-6 bg-white shadow-xl w-full max-w-4xl mx-auto">
       <h2 className="text-xl font-semibold mb-4 text-gray-800">AI Assistant</h2>
       
-      <div className="chat-container mb-4 overflow-y-auto h-[600px] pr-4">
+      <div className="chat-container mb-4 overflow-y-auto h-[200px] pr-4">
         {messages.map((msg, index) => (
           <div
             key={index}

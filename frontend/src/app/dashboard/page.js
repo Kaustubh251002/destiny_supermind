@@ -19,7 +19,6 @@ const Dashboard = () => {
       setIsInitialLoad(false);
       setIsLoading(true);
       
-      // If we have metadata, clear any errors and stop loading
       if (metadata) {
         setError(null);
         setIsLoading(false);
@@ -31,22 +30,23 @@ const Dashboard = () => {
   if (isInitialLoad || !currentUser) {
     return (
       <div className="min-h-screen bg-gray-100 flex flex-col">
-        <Navbar />
+        <div className="relative">
+          {/* Animated arrow pointing to Switch User button */}
+          <div className="fixed top-16 right-32 flex flex-col items-center animate-bounce z-[9999]">
+            <ArrowUpRight className="h-8 w-8 text-purple-600" />
+            <span className="text-sm font-medium text-purple-600">Start Here</span>
+          </div>
+          <Navbar />
+        </div>
         <main className="flex-grow flex items-center justify-center p-4">
           <div className="text-center space-y-6 max-w-md mx-auto">
-            <div className="bg-white p-8 rounded-lg shadow-md relative">
-              {/* Animated arrow pointing to Switch User button */}
-              <div className="absolute -top-40 -right-80 flex flex-col items-center animate-bounce">
-                <ArrowUpRight className="h-8 w-8 text-purple-600" />
-                <span className="text-sm font-medium text-purple-600">Start Here</span>
-              </div>
-              
+            <div className="bg-white p-8 rounded-lg shadow-md">
               <UserPlus className="h-12 w-12 text-purple-600 mx-auto mb-4" />
               <h2 className="text-2xl font-bold text-gray-800 mb-2">
                 Welcome to InstaBuddy Analytics
               </h2>
               <p className="text-gray-600 mb-4">
-                Click "Switch User" at the top right to begin exploring your Instagram analytics.
+                Click &quot;Switch User&quot; at the top right to begin exploring your Instagram analytics.
               </p>
               <div className="bg-purple-50 p-4 rounded-lg">
                 <p className="text-sm text-purple-700">
