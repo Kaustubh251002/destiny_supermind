@@ -43,7 +43,7 @@ const Hero = () => {
           </button>
           
           <button
-            onClick={() => router.push('/')}
+            onClick={() => router.push('https://www.youtube.com/watch?v=5kNEL48Q588&feature=youtu.be')}
             className="secondary-button"
           >
             Watch Demo

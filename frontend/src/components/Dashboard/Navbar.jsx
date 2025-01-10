@@ -10,7 +10,6 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
 } from "../ui/sheet";
 import {
   Dialog,
@@ -28,6 +27,55 @@ import { Input } from "../ui/input";
 import { UserCircle, Loader2, Menu, X, ArrowUpRight } from "lucide-react";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
 
+// Moved UserSwitchForm outside of the main component
+const UserSwitchForm = React.memo(({
+  currentUser,
+  newUserID,
+  loading,
+  error,
+  onInputChange,
+  onKeyPress,
+  onSubmit
+}) => (
+  <div className="space-y-4">
+    <div>
+      <h3 className="font-semibold mb-1">Switch User</h3>
+      <p className="text-sm text-muted-foreground">
+        Current User: <span className="font-medium">{currentUser || "None"}</span>
+      </p>
+    </div>
+    <Input
+      type="text"
+      placeholder="Enter User ID"
+      value={newUserID}
+      onChange={onInputChange}
+      onKeyDown={onKeyPress}
+      className="w-full"
+      disabled={loading}
+      autoComplete="off"
+    />
+    <Button
+      className="w-full"
+      onClick={onSubmit}
+      disabled={loading || !newUserID}
+    >
+      {loading ? (
+        <div className="flex items-center gap-2">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Loading...
+        </div>
+      ) : (
+        "Submit"
+      )}
+    </Button>
+    {error && (
+      <Alert variant="destructive" className="mt-2">
+        <AlertDescription className="text-sm">{error}</AlertDescription>
+      </Alert>
+    )}
+  </div>
+));
+
 const Navbar = () => {
   const { currentUser, setUser } = useUserContext();
   const [newUserID, setNewUserID] = useState("");
@@ -38,7 +86,7 @@ const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isMobile = useMediaQuery("(max-width: 768px)");
 
-  const handleUserSwitch = async () => {
+  const handleUserSwitch = useCallback(async () => {
     setLoading(true);
     setError("");
 
@@ -66,22 +114,37 @@ const Navbar = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [newUserID, setUser]);
 
-  const handleKeyPress = (e) => {
+  const handleKeyPress = useCallback((e) => {
     if (e.key === "Enter" && !loading && newUserID) {
       handleUserSwitch();
     }
-  };
+  }, [loading, newUserID, handleUserSwitch]);
 
-  const handleAIChatToggle = () => {
+  const handleAIChatToggle = useCallback(() => {
     if (!currentUser) {
       setError("Please select a user before accessing AI chat.");
       setPopoverOpen(true);
       return;
     }
-    setAiChatOpen(!aiChatOpen);
+    setAiChatOpen(prev => !prev);
     setMobileMenuOpen(false);
+  }, [currentUser]);
+
+  const handleInputChange = useCallback((e) => {
+    setNewUserID(e.target.value);
+  }, []);
+
+  // Memoized form props
+  const formProps = {
+    currentUser,
+    newUserID,
+    loading,
+    error,
+    onInputChange: handleInputChange,
+    onKeyPress: handleKeyPress,
+    onSubmit: handleUserSwitch
   };
 
   return (
@@ -97,12 +160,11 @@ const Navbar = () => {
             </Link>
           </div>
 
-          <div className="hidden md:block">
+          <div className="hidden md:block relative">
             <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-4">
               <Button
                 variant="default"
-                className={`bg-gradient-to-r from-purple-600 to-indigo-600 text-white w-full md:w-auto ${!currentUser ? "opacity-50 cursor-not-allowed" : ""
-                  }`}
+                className={`bg-gradient-to-r from-purple-600 to-indigo-600 text-white w-full md:w-auto ${!currentUser ? "opacity-50 cursor-not-allowed" : ""}`}
                 onClick={handleAIChatToggle}
                 disabled={!currentUser}
               >
@@ -122,138 +184,50 @@ const Navbar = () => {
                     )}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent
-                  className="w-80 p-4"
-                  align={isMobile ? "start" : "end"}  // Adjust alignment for mobile
-                  side={isMobile ? "top" : "bottom"} // Position the popover above for mobile
-                  sideOffset={isMobile ? 4 : 8} // Adjust the distance from the button
-                >
-                  <div className="space-y-4">
-                    <div>
-                      <h3 className="font-semibold mb-1">Switch User</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Current User: <span className="font-medium">{currentUser || "None"}</span>
-                      </p>
-                    </div>
-                    <Input
-                      type="text"
-                      placeholder="Enter User ID"
-                      value={newUserID}
-                      onChange={(e) => setNewUserID(e.target.value)}
-                      onKeyPress={handleKeyPress}
-                      className="w-full"
-                      disabled={loading}
-                    />
-                    <Button
-                      className="w-full"
-                      onClick={handleUserSwitch}
-                      disabled={loading || !newUserID}
-                    >
-                      {loading ? (
-                        <div className="flex items-center gap-2">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Loading...
-                        </div>
-                      ) : (
-                        "Submit"
-                      )}
-                    </Button>
-                    {error && (
-                      <Alert variant="destructive" className="mt-2">
-                        <AlertDescription className="text-sm">{error}</AlertDescription>
-                      </Alert>
-                    )}
-                  </div>
+                <PopoverContent className="w-80 p-4" align="end">
+                  <UserSwitchForm {...formProps} />
                 </PopoverContent>
               </Popover>
-
             </div>
+
+            {!currentUser && !isMobile && (
+              <div className="absolute top-16 right-10 flex flex-col items-center animate-bounce">
+                <ArrowUpRight className="h-8 w-8 text-purple-600" />
+                <span className="text-sm font-medium text-purple-600">Start Here</span>
+              </div>
+            )}
           </div>
 
           <div className="md:hidden">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="relative"
+              onClick={() => setMobileMenuOpen(true)}
+            >
+              <Menu className="h-6 w-6" />
+              {!currentUser && (
+                <span className="absolute -top-1 -right-1 h-3 w-3 bg-purple-500 rounded-full animate-pulse" />
+              )}
+            </Button>
+
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative">
-                  <Menu className="h-6 w-6" />
-                  {!currentUser && (
-                    <span className="absolute -top-1 -right-1 h-3 w-3 bg-purple-500 rounded-full animate-pulse" />
-                  )}
-                </Button>
-              </SheetTrigger>
               <SheetContent side="right" className="w-full sm:w-80">
                 <SheetHeader>
                   <SheetTitle>Menu</SheetTitle>
                 </SheetHeader>
-                <div className="mt-8">
-                  <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-4">
-                    <Button
-                      variant="default"
-                      className={`bg-gradient-to-r from-purple-600 to-indigo-600 text-white w-full md:w-auto ${!currentUser ? "opacity-50 cursor-not-allowed" : ""
-                        }`}
-                      onClick={handleAIChatToggle}
-                      disabled={!currentUser}
-                    >
-                      Get answers through AI!
-                    </Button>
+                <div className="mt-8 space-y-4">
+                  <Button
+                    variant="default"
+                    className={`bg-gradient-to-r from-purple-600 to-indigo-600 text-white w-full ${!currentUser ? "opacity-50 cursor-not-allowed" : ""}`}
+                    onClick={handleAIChatToggle}
+                    disabled={!currentUser}
+                  >
+                    Get answers through AI!
+                  </Button>
 
-                    <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className="flex items-center gap-2 relative w-full md:w-auto justify-center"
-                        >
-                          <UserCircle className="h-4 w-4" />
-                          Switch User
-                          {!currentUser && (
-                            <span className="absolute -top-1 -right-1 h-3 w-3 bg-purple-500 rounded-full animate-pulse" />
-                          )}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent
-                        className="w-80 p-4"
-                        align={isMobile ? "start" : "end"}  // Adjust alignment for mobile
-                        side={isMobile ? "top" : "bottom"} // Position the popover above for mobile
-                        sideOffset={isMobile ? 4 : 8} // Adjust the distance from the button
-                      >
-                        <div className="space-y-4">
-                          <div>
-                            <h3 className="font-semibold mb-1">Switch User</h3>
-                            <p className="text-sm text-muted-foreground">
-                              Current User: <span className="font-medium">{currentUser || "None"}</span>
-                            </p>
-                          </div>
-                          <Input
-                            type="text"
-                            placeholder="Enter User ID"
-                            value={newUserID}
-                            onChange={(e) => setNewUserID(e.target.value)}
-                            onKeyPress={handleKeyPress}
-                            className="w-full"
-                            disabled={loading}
-                          />
-                          <Button
-                            className="w-full"
-                            onClick={handleUserSwitch}
-                            disabled={loading || !newUserID}
-                          >
-                            {loading ? (
-                              <div className="flex items-center gap-2">
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                                Loading...
-                              </div>
-                            ) : (
-                              "Submit"
-                            )}
-                          </Button>
-                          {error && (
-                            <Alert variant="destructive" className="mt-2">
-                              <AlertDescription className="text-sm">{error}</AlertDescription>
-                            </Alert>
-                          )}
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-
+                  <div className="p-4 bg-gray-50 rounded-lg">
+                    <UserSwitchForm {...formProps} />
                   </div>
                 </div>
               </SheetContent>

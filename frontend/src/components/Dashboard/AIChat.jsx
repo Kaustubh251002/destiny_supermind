@@ -12,7 +12,7 @@ const TypeWriter = ({ text, onComplete }) => {
       const timeout = setTimeout(() => {
         setDisplayText(prev => prev + text[currentIndex]);
         setCurrentIndex(prev => prev + 1);
-      }, 10); // Changed from 30 to 10 for faster typing speed
+      }, 5); // Changed from 30 to 10 for faster typing speed
 
       return () => clearTimeout(timeout);
     } else if (onComplete) {
