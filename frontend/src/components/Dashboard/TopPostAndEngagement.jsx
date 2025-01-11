@@ -74,13 +74,37 @@ const MediaContent = ({ post, username, useProxy, proxiedImageUrl, directImageUr
 const TopPost = ({ post, username }) => {
   const [mediaError, setMediaError] = useState(false);
   const [useProxy, setUseProxy] = useState(false);
+  const [resolvedImageUrl, setResolvedImageUrl] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const shortcode = post.metadata.post_id || "";
-  const directImageUrl = `https://instagram.com/p/${shortcode}/media/?size=l`;
+  
+  useEffect(() => {
+    const fetchResolvedUrl = async () => {
+      try {
+        const response = await fetch(`/api/resolve-instagram-url?shortcode=${shortcode}`);
+        if (!response.ok) throw new Error('Failed to resolve URL');
+        const data = await response.json();
+        setResolvedImageUrl(data.resolvedUrl);
+        setIsLoading(false);
+      } catch (err) {
+        console.error('Error resolving URL:', err);
+        setIsLoading(false);
+        setMediaError(true);
+      }
+    };
 
-  const proxiedImageUrl = `/api/image-proxy?imageUrl=${encodeURIComponent(directImageUrl)}`;
+    if (shortcode) {
+      fetchResolvedUrl();
+    }
+  }, [shortcode]);
+
+  const directImageUrl = resolvedImageUrl;
+  const proxiedImageUrl = directImageUrl ? `/api/image-proxy?imageUrl=${encodeURIComponent(directImageUrl)}` : null;
 
   useEffect(() => {
+    if (!directImageUrl) return;
+
     const loadMedia = async () => {
       if (post.metadata.media_type === 'video') {
         // For videos, just check if the thumbnail loads
@@ -127,6 +151,21 @@ const TopPost = ({ post, username }) => {
 
     loadMedia();
   }, [directImageUrl, proxiedImageUrl, post.metadata.media_type]);
+
+  if (isLoading) {
+    return (
+      <Card className="flex flex-col h-full">
+        <CardHeader>
+          <CardTitle className="text-lg font-bold">Top Performing Post</CardTitle>
+        </CardHeader>
+        <CardContent className="flex-grow flex flex-col">
+          <div className="w-full h-80 flex items-center justify-center bg-gray-100 rounded-lg">
+            <p>Loading media...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="flex flex-col h-full">
