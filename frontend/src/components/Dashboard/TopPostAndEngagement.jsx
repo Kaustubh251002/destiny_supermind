@@ -78,8 +78,6 @@ const TopPost = ({ post, username }) => {
   const shortcode = post.metadata.post_id || "";
   const directImageUrl = `https://instagram.com/p/${shortcode}/media/?size=l`;
 
-
-
   const proxiedImageUrl = `/api/image-proxy?imageUrl=${encodeURIComponent(directImageUrl)}`;
 
   useEffect(() => {
@@ -210,7 +208,8 @@ const EngagementChart = ({ posts }) => {
       hour: hour.toString().padStart(2, '0') + ':00',
       posts: postsAtHour.length,
       totalEngagement,
-      avgEngagement
+      avgEngagement,
+      id: `hour-${hour}` // Add unique id for each data point
     };
   });
 
@@ -246,7 +245,7 @@ const EngagementChart = ({ posts }) => {
           >
             {hourlyData.map((entry, index) => (
               <Cell
-                key={`cell-${index}`}
+                key={`engagement-cell-${entry.id}`} // Updated unique key
                 fill={hoveredBar === index ? '#6D28D9' : '#8B5CF6'}
                 className="transition-all duration-200"
                 style={{
@@ -293,6 +292,28 @@ const Dashboard = ({ username, posts }) => {
 
   return (
     <div className="max-w-7xl mx-auto p-4 space-y-6">
+      {/* New Username Header */}
+      <div className="bg-gradient-to-r from-purple-100 to-pink-100 rounded-lg p-4 md:p-6 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-2">
+          <div className="min-w-0"> {/* Add min-w-0 to allow text truncation */}
+            <h1 className="text-xl md:text-2xl font-bold text-gray-800 truncate">
+              @{username}
+            </h1>
+            <p className="text-sm text-gray-600 mt-1 truncate">
+              Instagram Analytics Dashboard
+            </p>
+          </div>
+          <a
+            href={`https://instagram.com/${username}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-purple-600 hover:text-purple-700 text-sm font-medium hover:underline whitespace-nowrap"
+          >
+            View Profile
+          </a>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <TopPost post={topPost} username={username} />
         
