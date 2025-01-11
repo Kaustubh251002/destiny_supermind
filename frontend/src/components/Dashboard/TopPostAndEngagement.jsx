@@ -75,7 +75,11 @@ const TopPost = ({ post, username }) => {
   const [mediaError, setMediaError] = useState(false);
   const [useProxy, setUseProxy] = useState(false);
 
-  const directImageUrl = post.metadata.urls[0] || "";
+  const shortcode = post.metadata.post_id || "";
+  const directImageUrl = `https://instagram.com/p/${shortcode}/media/?size=l`;
+
+
+
   const proxiedImageUrl = `/api/image-proxy?imageUrl=${encodeURIComponent(directImageUrl)}`;
 
   useEffect(() => {
